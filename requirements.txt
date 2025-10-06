@@ -1,0 +1,14 @@
+ogbench == 1.1.0
+jax[cuda12] >= 0.4.26
+flax >= 0.8.4
+distrax >= 0.1.5
+ml_collections >= 1.1.0
+matplotlib >= 3.10.3
+moviepy >= 2.1.2
+wandb >= 0.19.11
+d4rl
+gymnasium == 0.29.1  # We can't use gymnasium >= 1.0.0 because it breaks d4rl.
+gym == 0.23.1  # For d4rl.
+numpy == 1.26.4  # For d4rl.
+shimmy[gym-v21,gym-v26]  # For d4rl.
+Cython < 3  # For d4rl.
