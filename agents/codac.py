@@ -51,40 +51,13 @@ class CODACAgent(flax.struct.PyTreeNode):
         quantiles = self.network.select('critic')(
             batch['observations'], batch['actions'], taus, params=grad_params)  # (num_ensembles, batch_size, num_quantiles, 1)
 
-        if self.config['actor_loss'] == 'sfbc':
-            n_next_noises = jax.random.normal(
-                next_action_rng,
-                (batch_size, self.config['num_rs_samples'], self.config['action_dim'])
-            )
-            n_next_observations = jnp.repeat(
-                batch['next_observations'][:, None],
-                self.config['num_rs_samples'],
-                axis=1,
-            )
-            n_next_actions = self.compute_flow_actions(n_next_noises, n_next_observations)
-
-            n_next_taus = jax.random.uniform(
-                n_next_tau_rng,
-                shape=(batch_size, self.config['num_rs_samples'], self.config['num_quantiles'])
-            )
-            n_next_quantiles = self.network.select('critic')(n_next_observations, n_next_actions, n_next_taus)
-            if self.config['quantile_agg'] == 'min':
-                n_next_quantiles = n_next_quantiles.min(axis=0)
-            else:
-                n_next_quantiles = n_next_quantiles.mean(axis=0)
-            n_next_q = jnp.mean(n_next_quantiles.squeeze(-1), axis=-1)
-
-            next_actions = n_next_actions[jnp.arange(batch_size), jnp.argmax(n_next_q, axis=-1)]
-        elif self.config['actor_loss'] == 'ddpgbc':
-            next_noises = jax.random.normal(
-                next_action_rng,
-                (batch_size, self.config['action_dim'])
-            )
-            next_actions = self.network.select('actor_onestep_flow')(
-                batch['next_observations'], next_noises)
-            next_actions = jnp.clip(next_actions, -1, 1)
-        else:
-            raise NotImplementedError
+        next_noises = jax.random.normal(
+            next_action_rng,
+            (batch_size, self.config['action_dim'])
+        )
+        next_actions = self.network.select('actor_onestep_flow')(
+            batch['next_observations'], next_noises)
+        next_actions = jnp.clip(next_actions, -1, 1)
 
         next_taus = jax.random.uniform(next_tau_rng, shape=(batch_size, self.config['num_quantiles']))
         next_quantiles = self.network.select('target_critic')(
@@ -100,7 +73,7 @@ class CODACAgent(flax.struct.PyTreeNode):
         quantile_huber_loss = self.quantile_huber_loss(td_errors, taus, self.config['kappa'])
 
         # CODAC penalty
-        rng, rand_action_rng, action_rng, action_log_prob_rng, tau_rng, choice_rng = jax.random.split(rng, 6)
+        rng, rand_action_rng, action_rng, action_log_prob_rng = jax.random.split(rng, 4)
 
         random_actions = jax.random.uniform(
             rand_action_rng,
@@ -110,82 +83,34 @@ class CODACAgent(flax.struct.PyTreeNode):
         )
         random_action_log_probs = jnp.log(0.5 ** self.config['action_dim'])
 
-        if self.config['actor_loss'] == 'sfbc':
-            n_noises = jax.random.normal(
-                action_rng,
-                (batch_size, self.config['num_logsumexp_samples'],
-                 self.config['num_rs_samples'], self.config['action_dim'])
-            )
-            n_log_prob_noises = jax.random.normal(
-                action_log_prob_rng,
-                (batch_size, self.config['num_logsumexp_samples'],
-                 self.config['num_rs_samples'], self.config['action_dim'])
-            )
-            n_observations = jnp.repeat(
-                jnp.repeat(batch['observations'][:, None, None],
-                           self.config['num_logsumexp_samples'],
-                           axis=1),
-                self.config['num_rs_samples'],
-                axis=2,
-            )
-            n_actions = self.compute_flow_actions(n_noises, n_observations)
-            n_action_log_probs = self.compute_flow_action_log_probs(n_log_prob_noises, n_observations, n_actions)
+        # one-step action log probability estimation
+        noises = jax.random.normal(
+            action_rng,
+            (batch_size, self.config['num_logsumexp_samples'], self.config['action_dim'])
+        )
+        log_prob_noises = jax.random.normal(
+            action_log_prob_rng,
+            (batch_size, self.config['num_logsumexp_samples'], self.config['action_dim'])
+        )
+        n_observations = jnp.repeat(
+            batch['observations'][:, None],
+            self.config['num_logsumexp_samples'],
+            axis=1
+        )
 
-            n_taus = jax.random.uniform(
-                tau_rng,
-                shape=(batch_size, self.config['num_logsumexp_samples'],
-                       self.config['num_rs_samples'], self.config['num_quantiles'])
-            )
-            n_quantiles = self.network.select('critic')(n_observations, n_actions, n_taus)
-            if self.config['quantile_agg'] == 'min':
-                n_quantiles = n_quantiles.min(axis=0)
-            else:
-                n_quantiles = n_quantiles.mean(axis=0)
-            n_q = jnp.mean(n_quantiles.squeeze(-1), axis=-1)
+        actions, jac_dot_z = jax.jvp(
+            lambda ns: self.network.select('actor_onestep_flow')(
+                n_observations, ns
+            ),
+            (noises,),
+            (log_prob_noises,)
+        )
+        # Hutchinson's trace estimator
+        div = jnp.sum(log_prob_noises * jac_dot_z, axis=-1)
 
-            # TODO (chongyiz): FIXME.
-            actions = n_actions[
-                jnp.arange(batch_size)[:, None],
-                jnp.arange(self.config['num_logsumexp_samples'])[None, :],
-                jnp.argmax(n_q, axis=-1)
-            ]
-            action_log_probs = n_action_log_probs[
-                jnp.arange(batch_size)[:, None],
-                jnp.arange(self.config['num_logsumexp_samples'])[None, :],
-                jnp.argmax(n_q, axis=-1)
-            ]
-        elif self.config['actor_loss'] == 'ddpgbc':
-            noises = jax.random.normal(
-                action_rng,
-                (batch_size, self.config['num_logsumexp_samples'], self.config['action_dim'])
-            )
-            log_prob_noises = jax.random.normal(
-                action_log_prob_rng,
-                (batch_size, self.config['num_logsumexp_samples'], self.config['action_dim'])
-            )
-            n_observations = jnp.repeat(
-                batch['observations'][:, None],
-                self.config['num_logsumexp_samples'],
-                axis=1
-            )
-            # actions = self.network.select('actor_onestep_flow')(
-            #     n_observations, noises)
-
-            actions, jac_dot_z = jax.jvp(
-                lambda ns: self.network.select('actor_onestep_flow')(
-                    n_observations, ns
-                ),
-                (noises,),
-                (log_prob_noises,)
-            )
-            # Hutchinson's trace estimator
-            div = jnp.sum(log_prob_noises * jac_dot_z, axis=-1)
-
-            actions = jnp.clip(actions, -1, 1)
-            gaussian_log_probs = -0.5 * jnp.sum(jnp.log(2 * jnp.pi) + noises ** 2, axis=-1)
-            action_log_probs = gaussian_log_probs - div
-        else:
-            raise NotImplementedError
+        actions = jnp.clip(actions, -1, 1)
+        gaussian_log_probs = -0.5 * jnp.sum(jnp.log(2 * jnp.pi) + noises ** 2, axis=-1)
+        action_log_probs = gaussian_log_probs - div
 
         q = jnp.mean(quantiles.squeeze(-1), axis=-1)
         observations = jnp.repeat(
@@ -223,7 +148,7 @@ class CODACAgent(flax.struct.PyTreeNode):
         }
 
     def actor_loss(self, batch, grad_params, rng):
-        """Compute the CODAC actor loss (SfBC or DDPG+BC)."""
+        """Compute the one-step flow actor loss."""
         batch_size, action_dim = batch['actions'].shape
         rng, x_rng, t_rng, q_rng, actor_rng = jax.random.split(rng, 5)
 
@@ -237,53 +162,41 @@ class CODACAgent(flax.struct.PyTreeNode):
         pred = self.network.select('actor_flow')(batch['observations'], x_t, t, params=grad_params)
         bc_flow_loss = jnp.mean((pred - vel) ** 2)
 
-        if self.config['actor_loss'] == 'sfbc':
-            # behavioral cloning loss
-            actor_loss = bc_flow_loss
+        batch_size = batch['observations'].shape[0]
+        rng, noise_rng, tau_rng = jax.random.split(rng, 3)
 
-            info = {
-                'actor_loss': actor_loss,
-                'bc_flow_loss': bc_flow_loss,
-            }
-        elif self.config['actor_loss'] == 'ddpgbc':
-            # DDPG+BC loss.
-            batch_size = batch['observations'].shape[0]
-            rng, noise_rng, tau_rng = jax.random.split(rng, 3)
+        noises = jax.random.normal(noise_rng, (batch_size, action_dim))
+        target_flow_actions = self.compute_flow_actions(noises, batch['observations'])
+        actor_actions = self.network.select('actor_onestep_flow')(
+            batch['observations'], noises, params=grad_params)
+        actor_actions = jnp.clip(actor_actions, -1, 1)
+        distill_loss = jnp.mean((actor_actions - target_flow_actions) ** 2)
 
-            noises = jax.random.normal(noise_rng, (batch_size, action_dim))
-            target_flow_actions = self.compute_flow_actions(noises, batch['observations'])
-            actor_actions = self.network.select('actor_onestep_flow')(
-                batch['observations'], noises, params=grad_params)
-            actor_actions = jnp.clip(actor_actions, -1, 1)
-            distill_loss = jnp.mean((actor_actions - target_flow_actions) ** 2)
-
-            taus = jax.random.uniform(tau_rng, shape=(batch_size, self.config['num_quantiles']))
-            quantiles = self.network.select('critic')(batch['observations'], actor_actions, taus)
-            if self.config['quantile_agg'] == 'min':
-                quantiles = quantiles.min(axis=0)
-            else:
-                quantiles = quantiles.mean(axis=0)
-            q = jnp.mean(quantiles.squeeze(-1), axis=-1)
-
-            # Normalize Q values by the absolute mean to make the loss scale invariant.
-            q_loss = -q.mean()
-            if self.config['normalize_q_loss']:
-                lam = jax.lax.stop_gradient(1 / jnp.abs(q).mean())
-                q_loss = lam * q_loss
-
-            # Total loss.
-            actor_loss = bc_flow_loss + self.config['alpha'] * distill_loss + q_loss
-
-            info = {
-                'actor_loss': actor_loss,
-                'bc_flow_loss': bc_flow_loss,
-                'distill_loss': distill_loss,
-                'q_loss': q_loss,
-                'q_mean': q.mean(),
-                'q_abs_mean': jnp.abs(q).mean(),
-            }
+        taus = jax.random.uniform(tau_rng, shape=(batch_size, self.config['num_quantiles']))
+        quantiles = self.network.select('critic')(batch['observations'], actor_actions, taus)
+        if self.config['quantile_agg'] == 'min':
+            quantiles = quantiles.min(axis=0)
         else:
-            raise ValueError(f'Unsupported actor loss: {self.config["actor_loss"]}')
+            quantiles = quantiles.mean(axis=0)
+        q = jnp.mean(quantiles.squeeze(-1), axis=-1)
+
+        # Normalize Q values by the absolute mean to make the loss scale invariant.
+        q_loss = -q.mean()
+        if self.config['normalize_q_loss']:
+            lam = jax.lax.stop_gradient(1 / jnp.abs(q).mean())
+            q_loss = lam * q_loss
+
+        # Total loss.
+        actor_loss = bc_flow_loss + self.config['alpha'] * distill_loss + q_loss
+
+        info = {
+            'actor_loss': actor_loss,
+            'bc_flow_loss': bc_flow_loss,
+            'distill_loss': distill_loss,
+            'q_loss': q_loss,
+            'q_mean': q.mean(),
+            'q_abs_mean': jnp.abs(q).mean(),
+        }
 
         return actor_loss, info
 
@@ -367,62 +280,6 @@ class CODACAgent(flax.struct.PyTreeNode):
 
         return noisy_actions
 
-    def compute_flow_action_log_probs(
-        self,
-        noises,
-        observations,
-        actions,
-        init_times=None,
-        end_times=None,
-    ):
-        noisy_actions = actions
-        div_int = jnp.zeros(noisy_actions.shape[:-1])
-        noisy_actions = noises
-        if init_times is None:
-            init_times = jnp.ones((*noisy_actions.shape[:-1], 1), dtype=noisy_actions.dtype)
-        if end_times is None:
-            end_times = jnp.zeros((*noisy_actions.shape[:-1], 1), dtype=noisy_actions.dtype)
-        step_size = (end_times - init_times) / self.config['num_flow_steps']
-
-        def func(carry, i):
-            """
-            carry: (noisy_goals, div_int, rng)
-            i: current step index
-            """
-            noisy_actions, div_int = carry
-
-            times = i * step_size + init_times
-            vf, jac_vf_dot_z = jax.jvp(
-                lambda actions: self.network.select('actor_flow')(
-                    observations, actions, times
-                ),
-                (noisy_actions,),
-                (noises, )
-            )
-            # Hutchinson's trace estimator
-            div = jnp.sum(noises * jac_vf_dot_z, axis=-1)
-
-            new_noisy_actions = noisy_actions + vf * step_size
-            new_div_int = div_int + div * step_size.squeeze(-1)
-
-            if self.config['clip_flow_actions']:
-                new_noisy_actions = jnp.clip(new_noisy_actions, -1, 1)
-
-            return (new_noisy_actions, new_div_int), None
-
-        # Use lax.scan to do the iteration
-        (noisy_actions, div_int), _ = jax.lax.scan(
-            func, (noisy_actions, div_int), jnp.arange(self.config['num_flow_steps']))
-
-        if not self.config['clip_flow_actions']:
-            noisy_actions = jnp.clip(noisy_actions, -1, 1)
-
-        # Finally, compute log_prob using the noisy_actions and div_int
-        gaussian_log_probs = -0.5 * jnp.sum(jnp.log(2 * jnp.pi) + noisy_actions ** 2, axis=-1)
-        log_prob = gaussian_log_probs + div_int
-
-        return log_prob
-
     @jax.jit
     def sample_actions(
         self,
@@ -431,44 +288,17 @@ class CODACAgent(flax.struct.PyTreeNode):
         temperature=1.0,
     ):
         """Sample actions from the actor."""
-        if self.config['actor_loss'] == 'sfbc':
-            noise_seed, tau_seed = jax.random.split(seed)
+        action_seed, noise_seed = jax.random.split(seed)
+        noises = jax.random.normal(
+            action_seed,
+            (
+                *observations.shape[:-len(self.config['ob_dims'])],
+                self.config['action_dim'],
+            ),
+        )
+        actions = self.network.select('actor_onestep_flow')(observations, noises)
+        actions = jnp.clip(actions, -1, 1)
 
-            n_noises = jax.random.normal(
-                noise_seed,
-                (*observations.shape[:-len(self.config['ob_dims'])],
-                 self.config['num_rs_samples'],
-                 self.config['action_dim'])
-            )
-            n_observations = jnp.repeat(
-                observations[None],
-                self.config['num_rs_samples'],
-                axis=0,
-            )
-            n_actions = self.compute_flow_actions(n_noises, n_observations)
-
-            taus = jax.random.uniform(tau_seed, shape=(self.config['num_rs_samples'], self.config['num_quantiles']))
-            quantiles = self.network.select('critic')(n_observations, n_actions, taus)
-            if self.config['quantile_agg'] == 'min':
-                quantiles = quantiles.min(axis=0)
-            else:
-                quantiles = quantiles.mean(axis=0)
-            q = jnp.mean(quantiles.squeeze(-1), axis=-1)
-
-            actions = n_actions[jnp.argmax(q)]
-        elif self.config['actor_loss'] == 'ddpgbc':
-            action_seed, noise_seed = jax.random.split(seed)
-            noises = jax.random.normal(
-                action_seed,
-                (
-                    *observations.shape[:-len(self.config['ob_dims'])],
-                    self.config['action_dim'],
-                ),
-            )
-            actions = self.network.select('actor_onestep_flow')(observations, noises)
-            actions = jnp.clip(actions, -1, 1)
-        else:
-            raise NotImplementedError
         return actions
 
     @classmethod

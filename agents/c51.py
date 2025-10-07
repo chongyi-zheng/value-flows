@@ -31,37 +31,7 @@ class C51Agent(flax.struct.PyTreeNode):
         logits = self.network.select('critic')(
             batch['observations'], batch['actions'], params=grad_params)
 
-        if self.config['actor_loss'] == 'sfbc':
-            n_next_noises = jax.random.normal(
-                next_action_rng,
-                (batch_size, self.config['num_samples'], self.config['action_dim'])
-            )
-            n_next_observations = jnp.repeat(
-                jnp.expand_dims(batch['next_observations'], 1),
-                self.config['num_samples'],
-                axis=1,
-            )
-            n_next_actions = self.compute_flow_actions(n_next_noises, n_next_observations)
-
-            n_next_logits = self.network.select('critic')(n_next_observations, n_next_actions)
-            n_next_probs = jax.nn.softmax(n_next_logits, axis=-1)
-            n_next_qs = jnp.sum(n_next_probs * self.config['atoms'][None, None], axis=-1)
-            if self.config['q_agg'] == 'min':
-                n_next_q = n_next_qs.min(axis=0)
-            else:
-                n_next_q = n_next_qs.mean(axis=0)
-
-            next_actions = n_next_actions[jnp.arange(batch_size), jnp.argmax(n_next_q, axis=-1)]
-        elif self.config['actor_loss'] == 'ddpgbc':
-            next_noises = jax.random.normal(
-                next_action_rng,
-                (batch_size, self.config['action_dim'])
-            )
-            next_actions = self.network.select('actor_onestep_flow')(
-                batch['next_observations'], next_noises)
-            next_actions = jnp.clip(next_actions, -1, 1)
-        else:
-            raise NotImplementedError
+        next_actions = self.sample_actions(batch['next_observations'], next_action_rng)
 
         next_logits = self.network.select('target_critic')(
             batch['next_observations'], next_actions)
@@ -99,7 +69,7 @@ class C51Agent(flax.struct.PyTreeNode):
         }
 
     def actor_loss(self, batch, grad_params, rng):
-        """Compute the C51 actor loss (SfBC or DDPG+BC)."""
+        """Compute the BC flow actor loss."""
         batch_size, action_dim = batch['actions'].shape
         rng, x_rng, t_rng, q_rng, actor_rng = jax.random.split(rng, 5)
 
@@ -110,55 +80,13 @@ class C51Agent(flax.struct.PyTreeNode):
         x_t = (1 - t) * x_0 + t * x_1
         vel = x_1 - x_0
 
-        pred = self.network.select('actor_flow')(batch['observations'], x_t, t, params=grad_params)
-        bc_flow_loss = jnp.mean((pred - vel) ** 2)
+        pred = self.network.select('actor_flow')(
+            batch['observations'], x_t, t, params=grad_params)
+        actor_loss = jnp.mean((pred - vel) ** 2)
 
-        if self.config['actor_loss'] == 'sfbc':
-            actor_loss = bc_flow_loss
-
-            info = {
-                'actor_loss': actor_loss,
-                'bc_flow_loss': bc_flow_loss,
-            }
-        elif self.config['actor_loss'] == 'ddpgbc':
-            # DDPG+BC loss.
-            batch_size = batch['observations'].shape[0]
-            rng, noise_rng, tau_rng = jax.random.split(rng, 3)
-
-            noises = jax.random.normal(noise_rng, (batch_size, action_dim))
-            target_flow_actions = self.compute_flow_actions(noises, batch['observations'])
-            actor_actions = self.network.select('actor_onestep_flow')(
-                batch['observations'], noises, params=grad_params)
-            actor_actions = jnp.clip(actor_actions, -1, 1)
-            distill_loss = jnp.mean((actor_actions - target_flow_actions) ** 2)
-
-            logits = self.network.select('critic')(batch['observations'], actor_actions)
-            probs = jax.nn.softmax(logits, axis=-1)
-            qs = jnp.sum(probs * self.config['atoms'][None, None], axis=-1)
-            if self.config['q_agg'] == 'min':
-                q = qs.min(axis=0)
-            else:
-                q = qs.mean(axis=0)
-
-            # Normalize Q values by the absolute mean to make the loss scale invariant.
-            q_loss = -q.mean()
-            if self.config['normalize_q_loss']:
-                lam = jax.lax.stop_gradient(1 / jnp.abs(q).mean())
-                q_loss = lam * q_loss
-
-            # Total loss.
-            actor_loss = bc_flow_loss + self.config['alpha'] * distill_loss + q_loss
-
-            info = {
-                'actor_loss': actor_loss,
-                'bc_flow_loss': bc_flow_loss,
-                'distill_loss': distill_loss,
-                'q_loss': q_loss,
-                'q_mean': q.mean(),
-                'q_abs_mean': jnp.abs(q).mean(),
-            }
-        else:
-            raise ValueError(f'Unsupported actor loss: {self.config["actor_loss"]}')
+        info = {
+            'actor_loss': actor_loss,
+        }
 
         return actor_loss, info
 
@@ -210,6 +138,7 @@ class C51Agent(flax.struct.PyTreeNode):
         init_times=None,
         end_times=None,
     ):
+        """Sample actions from the flow actor using the Euler method."""
         noisy_actions = noises
         if init_times is None:
             init_times = jnp.zeros((*noisy_actions.shape[:-1], 1), dtype=noisy_actions.dtype)
@@ -249,46 +178,30 @@ class C51Agent(flax.struct.PyTreeNode):
         seed=None,
         temperature=1.0,
     ):
-        """Sample actions from the actor."""
-        if self.config['actor_loss'] == 'sfbc':
-            n_noises = jax.random.normal(
-                seed,
-                (*observations.shape[:-len(self.config['ob_dims'])],
-                 self.config['num_samples'],
-                 self.config['action_dim'])
-            )
-            n_observations = jnp.repeat(
-                jnp.expand_dims(observations, 0),
-                self.config['num_samples'],
-                axis=0,
-            )
-            n_actions = self.compute_flow_actions(n_noises, n_observations)
+        """Sample actions using rejection sampling."""
+        n_noises = jax.random.normal(
+            seed,
+            (*observations.shape[:-len(self.config['ob_dims'])],
+             self.config['num_samples'],
+             self.config['action_dim'])
+        )
+        n_observations = jnp.repeat(
+            jnp.expand_dims(observations, -2),
+            self.config['num_samples'],
+            axis=-2,
+        )
+        n_actions = self.compute_flow_actions(n_noises, n_observations)
 
-            # n_observations = jnp.repeat(jnp.expand_dims(observations, 0), self.config['num_samples'], axis=0)
-            # n_dist = self.network.select('actor')(n_observations, temperature=temperature)
-            # n_actions = n_dist.sample(seed=seed)
+        n_logits = self.network.select('critic')(n_observations, n_actions)
+        n_probs = jax.nn.softmax(n_logits, axis=-1)
+        qs = jnp.sum(n_probs * self.config['atoms'][None, None], axis=-1)
+        if self.config['q_agg'] == 'min':
+            q = qs.min(axis=0)
+        else:
+            q = qs.mean(axis=0)
 
-            n_logits = self.network.select('critic')(n_observations, n_actions)
-            n_probs = jax.nn.softmax(n_logits, axis=-1)
-            qs = jnp.sum(n_probs * self.config['atoms'][None, None], axis=-1)
-            if self.config['q_agg'] == 'min':
-                q = qs.min(axis=0)
-            else:
-                q = qs.mean(axis=0)
+        actions = n_actions[jnp.argmax(q)]
 
-            actions = n_actions[jnp.argmax(q)]
-        elif self.config['actor_loss'] == 'ddpgbc':
-            action_seed, noise_seed = jax.random.split(seed)
-            noises = jax.random.normal(
-                action_seed,
-                (
-                    *observations.shape[:-len(self.config['ob_dims'])],
-                    self.config['action_dim'],
-                ),
-            )
-            actions = self.network.select('actor_onestep_flow')(observations, noises)
-            actions = jnp.clip(actions, -1, 1)
-        actions = jnp.clip(actions, -1, 1)
         return actions
 
     @classmethod
@@ -306,7 +219,7 @@ class C51Agent(flax.struct.PyTreeNode):
             config: Configuration dictionary.
         """
         rng = jax.random.PRNGKey(seed)
-        rng, tau_rng, init_rng = jax.random.split(rng, 3)
+        rng, init_rng = jax.random.split(rng, 2)
 
         ex_observations = example_batch['observations']
         ex_actions = example_batch['actions']
@@ -359,10 +272,8 @@ class C51Agent(flax.struct.PyTreeNode):
         params = network_params
         params['modules_target_critic'] = params['modules_critic']
 
-        min_reward = example_batch['min_reward']
-        max_reward = example_batch['max_reward']
-        config['v_min'] = min_reward / (1 - config['discount'])
-        config['v_max'] = max_reward / (1 - config['discount'])
+        config['v_min'] = example_batch['min_reward'] / (1 - config['discount'])
+        config['v_max'] = example_batch['max_reward'] / (1 - config['discount'])
 
         atoms = jnp.linspace(config['v_min'], config['v_max'], config['num_atoms'])
         delta_atom = (config['v_max'] - config['v_min']) / (config['num_atoms'] - 1)
@@ -396,11 +307,8 @@ def get_config():
             tau=0.005,  # Target network update rate.
             q_agg='mean',  # Aggregation method for quantiles.
             clip_flow_actions=True,  # Whether to clip the intermediate flow actions.
-            actor_loss='sfbc',  # Actor loss type ('sfbc' or 'ddpgbc').
-            alpha=10.0,  # Temperature in AWR or BC coefficient in DDPG+BC.
             num_samples=16,  # Number of action samples for rejection sampling.
             num_flow_steps=10,  # Number of flow steps.
-            normalize_q_loss=False,  # Whether to normalize the Q loss.
             encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).
         )
     )

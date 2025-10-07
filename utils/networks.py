@@ -1,4 +1,4 @@
-from typing import Any, Optional, Sequence
+from typing import Any, Sequence
 
 import distrax
 import flax.linen as nn
@@ -21,13 +21,6 @@ def ensemblize(cls, num_qs, in_axes=None, out_axes=0, **kwargs):
         axis_size=num_qs,
         **kwargs,
     )
-
-
-class Identity(nn.Module):
-    """Identity layer."""
-
-    def __call__(self, x):
-        return x
 
 
 class MLP(nn.Module):
@@ -63,17 +56,6 @@ class MLP(nn.Module):
         return x
 
 
-class LogParam(nn.Module):
-    """Scalar parameter module with log scale."""
-
-    init_value: float = 1.0
-
-    @nn.compact
-    def __call__(self):
-        log_value = self.param('log_value', init_fn=lambda key: jnp.full((), jnp.log(self.init_value)))
-        return jnp.exp(log_value)
-
-
 class TransformedWithMode(distrax.Transformed):
     """Transformed distribution with mode calculation."""
 
@@ -91,77 +73,6 @@ class CosineEmbedding(nn.Module):
         cos_embeddings = jnp.cos(freqs * taus[..., None])
 
         return cos_embeddings
-
-
-class Actor(nn.Module):
-    """Gaussian actor network.
-
-    Attributes:
-        hidden_dims: Hidden layer dimensions.
-        action_dim: Action dimension.
-        layer_norm: Whether to apply layer normalization.
-        log_std_min: Minimum value of log standard deviation.
-        log_std_max: Maximum value of log standard deviation.
-        tanh_squash: Whether to squash the action with tanh.
-        state_dependent_std: Whether to use state-dependent standard deviation.
-        const_std: Whether to use constant standard deviation.
-        final_fc_init_scale: Initial scale of the final fully-connected layer.
-        encoder: Optional encoder module to encode the inputs.
-    """
-
-    hidden_dims: Sequence[int]
-    action_dim: int
-    layer_norm: bool = False
-    log_std_min: Optional[float] = -5
-    log_std_max: Optional[float] = 2
-    tanh_squash: bool = False
-    state_dependent_std: bool = False
-    const_std: bool = True
-    final_fc_init_scale: float = 1e-2
-    encoder: nn.Module = None
-
-    def setup(self):
-        self.actor_net = MLP(self.hidden_dims, activate_final=True, layer_norm=self.layer_norm)
-        self.mean_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
-        if self.state_dependent_std:
-            self.log_std_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
-        else:
-            if not self.const_std:
-                self.log_stds = self.param('log_stds', nn.initializers.zeros, (self.action_dim,))
-
-    def __call__(
-        self,
-        observations,
-        temperature=1.0,
-    ):
-        """Return action distributions.
-
-        Args:
-            observations: Observations.
-            temperature: Scaling factor for the standard deviation.
-        """
-        if self.encoder is not None:
-            inputs = self.encoder(observations)
-        else:
-            inputs = observations
-        outputs = self.actor_net(inputs)
-
-        means = self.mean_net(outputs)
-        if self.state_dependent_std:
-            log_stds = self.log_std_net(outputs)
-        else:
-            if self.const_std:
-                log_stds = jnp.zeros_like(means)
-            else:
-                log_stds = self.log_stds
-
-        log_stds = jnp.clip(log_stds, self.log_std_min, self.log_std_max)
-
-        distribution = distrax.MultivariateNormalDiag(loc=means, scale_diag=jnp.exp(log_stds) * temperature)
-        if self.tanh_squash:
-            distribution = TransformedWithMode(distribution, distrax.Block(distrax.Tanh(), ndims=1))
-
-        return distribution
 
 
 class Value(nn.Module):
@@ -187,7 +98,8 @@ class Value(nn.Module):
         mlp_class = MLP
         if self.num_ensembles > 1:
             mlp_class = ensemblize(mlp_class, self.num_ensembles)
-        value_net = mlp_class((*self.hidden_dims, self.value_dim), activate_final=False, layer_norm=self.layer_norm)
+        value_net = mlp_class((*self.hidden_dims, self.value_dim),
+                              activate_final=False, layer_norm=self.layer_norm)
 
         self.value_net = value_net
 
@@ -234,13 +146,13 @@ class ValueVectorField(nn.Module):
         mlp_class = MLP
         if self.num_ensembles > 1:
             mlp_class = ensemblize(mlp_class, self.num_ensembles)
-        value_net = mlp_class((*self.hidden_dims, 1), activate_final=False,
+        value_net = mlp_class((*self.hidden_dims, self.value_dim), activate_final=False,
                               layer_norm=self.layer_norm, dropout_rate=self.dropout_rate)
 
         self.value_net = value_net
 
     @nn.compact
-    def __call__(self, returns, times, observations, actions=None, is_encoded=False, training=False):
+    def __call__(self, returns, times, observations, actions=None):
         """Return the vectors at the given states, actions, and times.
 
         Args:
@@ -248,19 +160,15 @@ class ValueVectorField(nn.Module):
             times: Times.
             observations: Observations.
             actions: Actions.
-            is_encoded: Whether the observations are already encoded.
-            training: Whether the network is in training mode for dropout.
         """
-        if not is_encoded and self.encoder is not None:
+        if self.encoder is not None:
             observations = self.encoder(observations)
         if actions is None:
             inputs = jnp.concatenate([returns, times, observations], axis=-1)
         else:
             inputs = jnp.concatenate([returns, times, observations, actions], axis=-1)
 
-        v = self.value_net(inputs, training=training)
-        # if self.value_dim == 1:
-        #     v = v.squeeze(-1)
+        v = self.value_net(inputs)
 
         return v
 
@@ -281,7 +189,8 @@ class ActorVectorField(nn.Module):
     encoder: nn.Module = None
 
     def setup(self) -> None:
-        self.mlp = MLP((*self.hidden_dims, self.action_dim), activate_final=False, layer_norm=self.layer_norm)
+        self.mlp = MLP((*self.hidden_dims, self.action_dim),
+                       activate_final=False, layer_norm=self.layer_norm)
 
     @nn.compact
     def __call__(self, observations, actions, times=None, is_encoded=False):

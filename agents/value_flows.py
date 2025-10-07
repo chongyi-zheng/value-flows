@@ -87,29 +87,18 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
             q = (q1 + q2) / 2
 
         ret_noises = jax.random.normal(ret_rng, (batch_size, 1))
-        if self.config['ensemble_weight_type'] == 'ret_std_jac_est':
-            _, ret_jac_eps_prods1 = self.compute_flow_returns(
-                ret_noises, batch['observations'], batch['actions'],
-                flow_network_name='critic_flow1', return_jac_eps_prod=True)
-            _, ret_jac_eps_prods2 = self.compute_flow_returns(
-                ret_noises, batch['observations'], batch['actions'],
-                flow_network_name='critic_flow2', return_jac_eps_prod=True)
-        elif self.config['ensemble_weight_type'] == 'target_ret_std_jac_est':
-            _, ret_jac_eps_prods1 = self.compute_flow_returns(
-                ret_noises, batch['observations'], batch['actions'],
-                flow_network_name='target_critic_flow1', return_jac_eps_prod=True)
-            _, ret_jac_eps_prods2 = self.compute_flow_returns(
-                ret_noises, batch['observations'], batch['actions'],
-                flow_network_name='target_critic_flow2', return_jac_eps_prod=True)
-        # ret_vars1 = jnp.nan_to_num(ret_vars1.squeeze(-1), nan=0.0)
-        # ret_vars2 = jnp.nan_to_num(ret_vars2.squeeze(-1), nan=0.0)
+        _, ret_jac_eps_prods1 = self.compute_flow_returns(
+            ret_noises, batch['observations'], batch['actions'],
+            flow_network_name='target_critic_flow1', return_jac_eps_prod=True)
+        _, ret_jac_eps_prods2 = self.compute_flow_returns(
+            ret_noises, batch['observations'], batch['actions'],
+            flow_network_name='target_critic_flow2', return_jac_eps_prod=True)
         ret_stds1 = jnp.sqrt(ret_jac_eps_prods1.squeeze(-1) ** 2)
         ret_stds2 = jnp.sqrt(ret_jac_eps_prods2.squeeze(-1) ** 2)
         if self.config['q_agg'] == 'min':
             ret_stds = jnp.minimum(ret_stds1, ret_stds2)
         else:
             ret_stds = (ret_stds1 + ret_stds2) / 2
-        # ret_stds = jnp.sqrt(ret_vars)
         q_stds = ret_stds  # for logging
         weights = jax.nn.sigmoid(-self.config['ensemble_weight_temp'] / ret_stds) + 0.5
         weights = jax.lax.stop_gradient(weights)
@@ -190,9 +179,9 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
         }
 
     def actor_loss(self, batch, grad_params, rng):
-        """Compute the FQL actor loss."""
+        """Compute the BC flow actor loss."""
         batch_size, action_dim = batch['actions'].shape
-        rng, x_rng, t_rng, q_rng, actor_rng = jax.random.split(rng, 5)
+        rng, x_rng, t_rng = jax.random.split(rng, 3)
 
         # BC flow loss.
         x_0 = jax.random.normal(x_rng, (batch_size, action_dim))
@@ -202,78 +191,11 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
         vel = x_1 - x_0
 
         pred = self.network.select('actor_flow')(batch['observations'], x_t, t, params=grad_params)
-        bc_flow_loss = jnp.mean((pred - vel) ** 2)
+        actor_loss = jnp.mean((pred - vel) ** 2)
 
-        if 'ddpgbc' in self.config['policy_extraction']:
-            # Distillation loss.
-            rng, noise_rng = jax.random.split(rng)
-            noises = jax.random.normal(noise_rng, (batch_size, action_dim))
-            target_flow_actions = self.compute_flow_actions(noises, batch['observations'])
-            actor_actions = self.network.select('actor_onestep_flow')(
-                batch['observations'], noises, params=grad_params)
-            actor_actions = jnp.clip(actor_actions, -1, 1)
-            distill_loss = jnp.mean((actor_actions - target_flow_actions) ** 2)
-
-            # Q loss.
-            q_noises = jax.random.normal(q_rng, (batch_size, 1))
-            q1 = (q_noises + self.network.select('critic_flow1')(
-                q_noises, jnp.zeros_like(q_noises), batch['observations'], actor_actions)).squeeze(-1)
-            q2 = (q_noises + self.network.select('critic_flow2')(
-                q_noises, jnp.zeros_like(q_noises), batch['observations'], actor_actions)).squeeze(-1)
-            if self.config['clip_flow_returns']:
-                q1 = jnp.clip(
-                    q1,
-                    self.config['min_reward'] / (1 - self.config['discount']),
-                    self.config['max_reward'] / (1 - self.config['discount']),
-                )
-                q2 = jnp.clip(
-                    q2,
-                    self.config['min_reward'] / (1 - self.config['discount']),
-                    self.config['max_reward'] / (1 - self.config['discount']),
-                )
-            if self.config['q_agg'] == 'min':
-                q = jnp.minimum(q1, q2)
-            else:
-                q = (q1 + q2) / 2
-
-            q_loss = -q.mean()
-            if self.config['normalize_q_loss']:
-                lam = jax.lax.stop_gradient(1 / jnp.abs(q).mean())
-                q_loss = lam * q_loss
-
-            # Total loss.
-            actor_loss = bc_flow_loss + self.config['alpha_actor'] * distill_loss + q_loss
-
-            # Additional metrics for logging.
-            actor_noises = jax.random.normal(actor_rng, (batch_size, action_dim))
-            actions = self.network.select('actor_onestep_flow')(batch['observations'], actor_noises)
-            actions = jnp.clip(actions, -1, 1)
-            mse = jnp.mean((actions - batch['actions']) ** 2)
-
-            info = {
-                'actor_loss': actor_loss,
-                'bc_flow_loss': bc_flow_loss,
-                'distill_loss': distill_loss,
-                'q_loss': q_loss,
-                'q': q.mean(),
-                'mse': mse,
-            }
-        elif 'sfbc' in self.config['policy_extraction']:
-            actor_loss = bc_flow_loss
-
-            info = {
-                'actor_loss': actor_loss,
-                'bc_flow_loss': bc_flow_loss,
-            }
-        else:
-            raise NotImplementedError
-
-        # Additional metrics for logging.
-        # actor_noises = jax.random.normal(actor_rng, (batch_size, action_dim))
-        # actions = self.network.select('actor_onestep_flow')(batch['observations'], actor_noises)
-        # actions = jnp.clip(actions, -1, 1)
-        # mse = jnp.mean((actions - batch['actions']) ** 2)
-        # info.update(dict(mse=mse))
+        info = {
+            'actor_loss': actor_loss,
+        }
 
         return actor_loss, info
 
@@ -313,8 +235,6 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
             return self.total_loss(batch, grad_params, rng=rng)
 
         new_network, info = self.network.apply_loss_fn(loss_fn=loss_fn)
-        # self.target_update(new_network, 'critic')
-        # self.target_update(new_network, 'actor')
         self.target_update(new_network, 'critic_flow1')
         self.target_update(new_network, 'critic_flow2')
 
@@ -348,31 +268,14 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
             (noisy_returns, noisy_jac_eps_prod) = carry
 
             times = i * step_size + init_times
-            if self.config['ode_solver'] == 'euler':
-                # vector_field = self.network.select(flow_network_name)(
-                #     noisy_returns, times, observations, actions)
+            vector_field, jac_eps_prod = jax.jvp(
+                lambda ret: self.network.select(flow_network_name)(ret, times, observations, actions),
+                (noisy_returns, ),
+                (noisy_jac_eps_prod, ),
+            )
 
-                vector_field, jac_eps_prod = jax.jvp(
-                    lambda ret: self.network.select(flow_network_name)(ret, times, observations, actions),
-                    (noisy_returns, ),
-                    (noisy_jac_eps_prod, ),
-                )
-
-                new_noisy_returns = noisy_returns + step_size * vector_field
-                new_noisy_jac_eps_prod = noisy_jac_eps_prod + step_size * jac_eps_prod
-            elif self.config['ode_solver'] == 'midpoint':
-                vector_field = self.network.select(flow_network_name)(
-                    noisy_returns, times, observations, actions)
-
-                mid_noisy_returns = noisy_returns + 0.5 * step_size * vector_field
-                mid_times = times + 0.5 * step_size
-
-                vector_field = self.network.select(flow_network_name)(
-                    mid_noisy_returns, mid_times, observations, actions)
-
-                new_noisy_returns = noisy_returns + step_size * vector_field
-            else:
-                raise NotImplementedError
+            new_noisy_returns = noisy_returns + step_size * vector_field
+            new_noisy_jac_eps_prod = noisy_jac_eps_prod + step_size * jac_eps_prod
             if self.config['clip_flow_returns']:
                 new_noisy_returns = jnp.clip(
                     new_noisy_returns,
@@ -381,18 +284,10 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
                 )
 
             return (new_noisy_returns, new_noisy_jac_eps_prod), None
-            # return (new_noisy_returns,), None
 
         # Use lax.scan to do the iteration
         (noisy_returns, noisy_jac_eps_prod), _ = jax.lax.scan(
             func, (noisy_returns, noisy_jac_eps_prod), jnp.arange(self.config['num_flow_steps']))
-        # (noisy_returns,), _ = jax.lax.scan(
-        #     func, (noisy_returns,), jnp.arange(self.config['num_flow_steps']))
-        # noisy_returns = jnp.clip(
-        #     noisy_returns,
-        #     self.config['min_reward'] / (1 - self.config['discount']),
-        #     self.config['max_reward'] / (1 - self.config['discount']),
-        # )
 
         if return_jac_eps_prod:
             return noisy_returns, noisy_jac_eps_prod
@@ -447,163 +342,45 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
         temperature=1.0,
     ):
         """Sample actions from the one-step policy."""
-        if 'ddpgbc' in self.config['policy_extraction']:
-            action_seed, noise_seed = jax.random.split(seed)
-            noises = jax.random.normal(
-                action_seed,
-                (
-                    *observations.shape[: -len(self.config['ob_dims'])],
-                    self.config['action_dim'],
-                ),
+        action_seed, q_seed, ret_seed = jax.random.split(seed, 3)
+        actor_noises = jax.random.normal(
+            action_seed,
+            (*observations.shape[: -len(self.config['ob_dims'])], self.config['num_samples'], self.config['action_dim'])
+        )
+        n_observations = jnp.repeat(
+            jnp.expand_dims(observations, 0),
+            self.config['num_samples'],
+            axis=0
+        )
+        flow_actions = self.compute_flow_actions(actor_noises, n_observations)
+
+        q_noises = jax.random.normal(
+            q_seed,
+            (*observations.shape[: -len(self.config['ob_dims'])], self.config['num_samples'], 1)
+        )
+
+        q1 = (q_noises + self.network.select('critic_flow1')(
+            q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
+        q2 = (q_noises + self.network.select('critic_flow2')(
+            q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
+        if self.config['clip_flow_returns']:
+            q1 = jnp.clip(
+                q1,
+                self.config['min_reward'] / (1 - self.config['discount']),
+                self.config['max_reward'] / (1 - self.config['discount']),
             )
-            actions = self.network.select('actor_onestep_flow')(observations, noises)
-            actions = jnp.clip(actions, -1, 1)
-        elif self.config['policy_extraction'] == 'implicit_fql':
-            action_seed, noise_seed = jax.random.split(seed)
-            actions = jax.random.normal(
-                action_seed,
-                (
-                    *observations.shape[: -len(self.config['ob_dims'])],
-                    self.config['num_samples'],
-                    self.config['action_dim'],
-                ),
-            )
-            q_rng, rng = jax.random.split(seed)
-            q_noises = jax.random.normal(
-                q_rng,
-                (
-                    *observations.shape[: -len(self.config['ob_dims'])],
-                    self.config['num_samples'],
-                    1,
-                ),
+            q2 = jnp.clip(
+                q2,
+                self.config['min_reward'] / (1 - self.config['discount']),
+                self.config['max_reward'] / (1 - self.config['discount']),
             )
 
-            orig_observations = observations
-            n_observations = jnp.repeat(jnp.expand_dims(observations, 0), self.config['num_samples'], axis=0)
-            n_orig_observations = jnp.repeat(jnp.expand_dims(orig_observations, 0), self.config['num_samples'], axis=0)
-
-            actions = self.network.select('actor_onestep_flow')(n_observations, actions)
-            actions = jnp.clip(actions, -1, 1)
-
-            q1 = (q_noises + self.network.select('critic_flow1')(
-                q_noises, jnp.zeros_like(q_noises), n_orig_observations, actions)).squeeze(-1)
-            q2 = (q_noises + self.network.select('critic_flow2')(
-                q_noises, jnp.zeros_like(q_noises), n_orig_observations, actions)).squeeze(-1)
-            if self.config['clip_flow_returns']:
-                q1 = jnp.clip(
-                    q1,
-                    self.config['min_reward'] / (1 - self.config['discount']),
-                    self.config['max_reward'] / (1 - self.config['discount']),
-                )
-                q2 = jnp.clip(
-                    q2,
-                    self.config['min_reward'] / (1 - self.config['discount']),
-                    self.config['max_reward'] / (1 - self.config['discount']),
-                )
-
-            if self.config['q_agg'] == 'min':
-                q = jnp.minimum(q1, q2)
-            else:
-                q = (q1 + q2) / 2
-
-            actions = actions[jnp.argmax(q)]
-        elif 'sfbc' in self.config['policy_extraction']:
-            action_seed, q_seed, ret_seed = jax.random.split(seed, 3)
-            actor_noises = jax.random.normal(
-                action_seed,
-                (*observations.shape[: -len(self.config['ob_dims'])], self.config['num_samples'], self.config['action_dim'])
-            )
-            n_observations = jnp.repeat(
-                jnp.expand_dims(observations, 0),
-                self.config['num_samples'],
-                axis=0
-            )
-            flow_actions = self.compute_flow_actions(actor_noises, n_observations)
-
-            if self.config['policy_extraction'] == 'sfbc':
-                q_noises = jax.random.normal(
-                    q_seed,
-                    (*observations.shape[: -len(self.config['ob_dims'])], self.config['num_samples'], 1)
-                )
-
-                q1 = (q_noises + self.network.select('critic_flow1')(
-                    q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
-                q2 = (q_noises + self.network.select('critic_flow2')(
-                    q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
-                if self.config['clip_flow_returns']:
-                    q1 = jnp.clip(
-                        q1,
-                        self.config['min_reward'] / (1 - self.config['discount']),
-                        self.config['max_reward'] / (1 - self.config['discount']),
-                    )
-                    q2 = jnp.clip(
-                        q2,
-                        self.config['min_reward'] / (1 - self.config['discount']),
-                        self.config['max_reward'] / (1 - self.config['discount']),
-                    )
-
-                if self.config['q_agg'] == 'min':
-                    q = jnp.minimum(q1, q2)
-                else:
-                    q = (q1 + q2) / 2
-
-                actions = flow_actions[jnp.argmax(q)]
-            elif self.config['policy_extraction'] in ['sfbc_ucb', 'target_sfbc_ucb']:
-                # TODO: FIXME
-                raise NotImplementedError
-
-                q_noises = jax.random.normal(
-                    q_seed,
-                    (*observations.shape[: -len(self.config['ob_dims'])], self.config['num_samples'], 1)
-                )
-
-                q1 = (q_noises + self.network.select('critic_flow1')(
-                    q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
-                q2 = (q_noises + self.network.select('critic_flow2')(
-                    q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
-
-                ret_noises = jax.random.normal(
-                    ret_seed,
-                    (*observations.shape[: -len(self.config['ob_dims'])], self.config['num_samples'], 1)
-                )
-                if self.config['policy_extraction'] == 'sfbc_ucb':
-                    _, ret_jac_eps_prods1 = self.compute_flow_returns(
-                        ret_noises, n_observations, flow_actions,
-                        flow_network_name='critic_flow1', return_jac_eps_prod=True)
-                    _, ret_jac_eps_prods2 = self.compute_flow_returns(
-                        ret_noises, n_observations, flow_actions,
-                        flow_network_name='critic_flow2', return_jac_eps_prod=True)
-                elif self.config['policy_extraction'] == 'sfbc_target_ucb':
-                    _, ret_jac_eps_prods1 = self.compute_flow_returns(
-                        ret_noises, n_observations, flow_actions,
-                        flow_network_name='target_critic_flow1', return_jac_eps_prod=True)
-                    _, ret_jac_eps_prods2 = self.compute_flow_returns(
-                        ret_noises, n_observations, flow_actions,
-                        flow_network_name='target_critic_flow2', return_jac_eps_prod=True)
-                ret_stds1 = jnp.sqrt(ret_jac_eps_prods1.squeeze(-1) ** 2)
-                ret_stds2 = jnp.sqrt(ret_jac_eps_prods2.squeeze(-1) ** 2)
-                # ret_vars1 = jnp.nan_to_num(ret_vars1.squeeze(-1), nan=0.0)
-                # ret_vars2 = jnp.nan_to_num(ret_vars2.squeeze(-1), nan=0.0)
-                if self.config['q_agg'] == 'min':
-                    q = jnp.minimum(q1, q2)
-                    # ret_vars = jnp.minimum(ret_vars1, ret_vars2)
-                    ret_stds = jnp.minimum(ret_stds1, ret_stds2)
-                else:
-                    q = (q1 + q2) / 2
-                    ret_stds = (ret_stds1 + ret_stds2) / 2
-                # ret_stds = jnp.sqrt(ret_vars)
-
-                q_ucb = q + self.config['alpha_ucb'] * ret_stds
-                if self.config['clip_flow_returns']:
-                    q_ucb = jnp.clip(
-                        q_ucb,
-                        self.config['min_reward'] / (1 - self.config['discount']),
-                        self.config['max_reward'] / (1 - self.config['discount']),
-                    )
-
-                actions = flow_actions[jnp.argmax(q_ucb)]
+        if self.config['q_agg'] == 'min':
+            q = jnp.minimum(q1, q2)
         else:
-            raise NotImplementedError
+            q = (q1 + q2) / 2
+
+        actions = flow_actions[jnp.argmax(q)]
 
         return actions
 
@@ -735,15 +512,10 @@ def get_config():
             clip_flow_returns=True,  # Whether to clip flow returns.
             ensemble_weight_type='q_std',  # Type of ensemble weights ('q_std', 'ret_std_jac_est', 'target_ret_std_jac_est').
             ensemble_weight_temp=10.0,  # Temperature for the Q ensemble weights.
-            next_action_extraction='ddpgbc',  # Method to sample the next actions ('ddpgbc', 'sfbc_ucb', 'sfbc_target_ucb').
-            policy_extraction='ddpgbc',  # Method to sample the actions for evaluation ('ddpgbc', 'sfbc', 'sfbc_ucb').
-            critic_loss_type='q-learning',  # Type of the critic loss ('sarsa', 'q-learning').
             alpha_critic_td_return=1.0,  # bootstrapped return coefficient.
             alpha_critic_td_vf=1.0,  # bootstrapped vector field coefficient.
             alpha_actor=1.0,  # BC coefficient.
-            alpha_ucb=0.0,  # UCB coefficient.
             num_samples=16,  # Number of action samples for rejection sampling.
-            ode_solver='euler',  # Type of the ODE solver ('euler', 'midpoint').
             num_flow_steps=10,  # Number of flow steps.
             normalize_q_loss=False,  # Whether to normalize the Q loss.
             encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).

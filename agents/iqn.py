@@ -44,40 +44,7 @@ class IQNAgent(flax.struct.PyTreeNode):
         quantiles = self.network.select('critic')(
             batch['observations'], batch['actions'], taus, params=grad_params)  # (num_ensembles, batch_size, num_quantiles, 1)
 
-        if self.config['actor_loss'] == 'sfbc':
-            n_next_noises = jax.random.normal(
-                next_action_rng,
-                (batch_size, self.config['num_samples'], self.config['action_dim'])
-            )
-            n_next_observations = jnp.repeat(
-                jnp.expand_dims(batch['next_observations'], 1),
-                self.config['num_samples'],
-                axis=1,
-            )
-            n_next_actions = self.compute_flow_actions(n_next_noises, n_next_observations)
-
-            n_next_taus = jax.random.uniform(
-                n_next_tau_rng,
-                shape=(batch_size, self.config['num_samples'], self.config['num_quantiles'])
-            )
-            n_next_quantiles = self.network.select('critic')(n_next_observations, n_next_actions, n_next_taus)
-            if self.config['quantile_agg'] == 'min':
-                n_next_quantiles = n_next_quantiles.min(axis=0)
-            else:
-                n_next_quantiles = n_next_quantiles.mean(axis=0)
-            n_next_q = jnp.mean(n_next_quantiles.squeeze(-1), axis=-1)
-
-            next_actions = n_next_actions[jnp.arange(batch_size), jnp.argmax(n_next_q, axis=-1)]
-        elif self.config['actor_loss'] == 'ddpgbc':
-            next_noises = jax.random.normal(
-                next_action_rng,
-                (batch_size, self.config['action_dim'])
-            )
-            next_actions = self.network.select('actor_onestep_flow')(
-                batch['next_observations'], next_noises)
-            next_actions = jnp.clip(next_actions, -1, 1)
-        else:
-            raise NotImplementedError
+        next_actions = self.sample_actions(batch['next_observations'], next_action_rng)
 
         next_taus = jax.random.uniform(next_tau_rng, shape=(batch_size, self.config['num_quantiles']))
         next_quantiles = self.network.select('target_critic')(
@@ -106,7 +73,7 @@ class IQNAgent(flax.struct.PyTreeNode):
         }
 
     def actor_loss(self, batch, grad_params, rng):
-        """Compute the IQN actor loss (SfBC or DDPG+BC)."""
+        """Compute the BC flow actor loss."""
         batch_size, action_dim = batch['actions'].shape
         rng, x_rng, t_rng, q_rng, actor_rng = jax.random.split(rng, 5)
 
@@ -117,67 +84,13 @@ class IQNAgent(flax.struct.PyTreeNode):
         x_t = (1 - t) * x_0 + t * x_1
         vel = x_1 - x_0
 
-        pred = self.network.select('actor_flow')(batch['observations'], x_t, t, params=grad_params)
-        bc_flow_loss = jnp.mean((pred - vel) ** 2)
+        pred = self.network.select('actor_flow')(
+            batch['observations'], x_t, t, params=grad_params)
+        actor_loss = jnp.mean((pred - vel) ** 2)
 
-        if self.config['actor_loss'] == 'sfbc':
-            # behavioral cloning loss
-            # dist = self.network.select('actor')(batch['observations'], params=grad_params)
-            # log_prob = dist.log_prob(batch['actions'])
-            #
-            # actor_loss = -log_prob.mean()
-            #
-            # actor_info = {
-            #     'actor_loss': actor_loss,
-            #     'bc_log_prob': log_prob.mean(),
-            #     'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
-            #     'std': jnp.mean(dist.scale_diag),
-            # }
-            actor_loss = bc_flow_loss
-
-            info = {
-                'actor_loss': actor_loss,
-                'bc_flow_loss': bc_flow_loss,
-            }
-        elif self.config['actor_loss'] == 'ddpgbc':
-            # DDPG+BC loss.
-            batch_size = batch['observations'].shape[0]
-            rng, noise_rng, tau_rng = jax.random.split(rng, 3)
-
-            noises = jax.random.normal(noise_rng, (batch_size, action_dim))
-            target_flow_actions = self.compute_flow_actions(noises, batch['observations'])
-            actor_actions = self.network.select('actor_onestep_flow')(
-                batch['observations'], noises, params=grad_params)
-            actor_actions = jnp.clip(actor_actions, -1, 1)
-            distill_loss = jnp.mean((actor_actions - target_flow_actions) ** 2)
-
-            taus = jax.random.uniform(tau_rng, shape=(batch_size, self.config['num_quantiles']))
-            quantiles = self.network.select('critic')(batch['observations'], actor_actions, taus)
-            if self.config['quantile_agg'] == 'min':
-                quantiles = quantiles.min(axis=0)
-            else:
-                quantiles = quantiles.mean(axis=0)
-            q = jnp.mean(quantiles.squeeze(-1), axis=-1)
-
-            # Normalize Q values by the absolute mean to make the loss scale invariant.
-            q_loss = -q.mean()
-            if self.config['normalize_q_loss']:
-                lam = jax.lax.stop_gradient(1 / jnp.abs(q).mean())
-                q_loss = lam * q_loss
-
-            # Total loss.
-            actor_loss = bc_flow_loss + self.config['alpha'] * distill_loss + q_loss
-
-            info = {
-                'actor_loss': actor_loss,
-                'bc_flow_loss': bc_flow_loss,
-                'distill_loss': distill_loss,
-                'q_loss': q_loss,
-                'q_mean': q.mean(),
-                'q_abs_mean': jnp.abs(q).mean(),
-            }
-        else:
-            raise ValueError(f'Unsupported actor loss: {self.config["actor_loss"]}')
+        info = {
+            'actor_loss': actor_loss,
+        }
 
         return actor_loss, info
 
@@ -269,47 +182,29 @@ class IQNAgent(flax.struct.PyTreeNode):
         temperature=1.0,
     ):
         """Sample actions from the actor."""
-        if self.config['actor_loss'] == 'sfbc':
-            noise_seed, tau_seed = jax.random.split(seed)
+        noise_seed, tau_seed = jax.random.split(seed)
+        n_noises = jax.random.normal(
+            noise_seed,
+            (*observations.shape[:-len(self.config['ob_dims'])],
+             self.config['num_samples'],
+             self.config['action_dim'])
+        )
+        n_observations = jnp.repeat(
+            jnp.expand_dims(observations, 0),
+            self.config['num_samples'],
+            axis=0,
+        )
+        n_actions = self.compute_flow_actions(n_noises, n_observations)
 
-            # n_observations = jnp.repeat(jnp.expand_dims(observations, 0), self.config['num_samples'], axis=0)
-            # n_dist = self.network.select('actor')(n_observations, temperature=temperature)
-            # n_actions = n_dist.sample(seed=action_seed)
-            n_noises = jax.random.normal(
-                noise_seed,
-                (*observations.shape[:-len(self.config['ob_dims'])],
-                 self.config['num_samples'],
-                 self.config['action_dim'])
-            )
-            n_observations = jnp.repeat(
-                jnp.expand_dims(observations, 0),
-                self.config['num_samples'],
-                axis=0,
-            )
-            n_actions = self.compute_flow_actions(n_noises, n_observations)
-
-            taus = jax.random.uniform(tau_seed, shape=(self.config['num_samples'], self.config['num_quantiles']))
-            quantiles = self.network.select('critic')(n_observations, n_actions, taus)
-            if self.config['quantile_agg'] == 'min':
-                quantiles = quantiles.min(axis=0)
-            else:
-                quantiles = quantiles.mean(axis=0)
-            q = jnp.mean(quantiles.squeeze(-1), axis=-1)
-
-            actions = n_actions[jnp.argmax(q)]
-        elif self.config['actor_loss'] == 'ddpgbc':
-            action_seed, noise_seed = jax.random.split(seed)
-            noises = jax.random.normal(
-                action_seed,
-                (
-                    *observations.shape[:-len(self.config['ob_dims'])],
-                    self.config['action_dim'],
-                ),
-            )
-            actions = self.network.select('actor_onestep_flow')(observations, noises)
-            actions = jnp.clip(actions, -1, 1)
+        taus = jax.random.uniform(tau_seed, shape=(self.config['num_samples'], self.config['num_quantiles']))
+        quantiles = self.network.select('critic')(n_observations, n_actions, taus)
+        if self.config['quantile_agg'] == 'min':
+            quantiles = quantiles.min(axis=0)
         else:
-            raise NotImplementedError
+            quantiles = quantiles.mean(axis=0)
+        q = jnp.mean(quantiles.squeeze(-1), axis=-1)
+
+        actions = n_actions[jnp.argmax(q)]
         return actions
 
     @classmethod
@@ -409,12 +304,9 @@ def get_config():
             kappa=0.9,  # Quantile regression threshold.
             quantile_agg='mean',  # Aggregation method for quantiles.
             clip_flow_actions=True,  # Whether to clip the intermediate flow actions.
-            actor_loss='sfbc',  # Actor loss type ('sfbc' or 'ddpgbc').
-            alpha=10.0,  # Distillation coefficient in DDPG+BC.
             num_quantiles=16,  # Number of quantile samples for estimating Q.
             num_samples=16,  # Number of action samples for rejection sampling.
             num_flow_steps=10,  # Number of flow steps.
-            normalize_q_loss=False,  # Whether to normalize the Q loss.
             encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).
         )
     )

@@ -49,7 +49,7 @@ def main(_):
     FLAGS.save_dir = os.path.join(FLAGS.save_dir, FLAGS.wandb_run_group, exp_name)
     os.makedirs(FLAGS.save_dir, exist_ok=True)
     if FLAGS.enable_wandb:
-        _, trigger_sync = setup_wandb(
+        setup_wandb(
             wandb_output_dir=FLAGS.save_dir,
             project='fdrl', group=FLAGS.wandb_run_group, name=exp_name,
             mode=FLAGS.wandb_mode
@@ -122,10 +122,6 @@ def main(_):
             last_time = time.time()
             if FLAGS.enable_wandb:
                 wandb.log(train_metrics, step=i)
-
-                if FLAGS.wandb_mode == 'offline':
-                    trigger_sync()
-
             train_logger.log(train_metrics, step=i)
 
         # Evaluate agent.
@@ -149,10 +145,6 @@ def main(_):
 
             if FLAGS.enable_wandb:
                 wandb.log(eval_metrics, step=i)
-
-                if FLAGS.wandb_mode == 'offline':
-                    trigger_sync()
-
             eval_logger.log(eval_metrics, step=i)
 
         # Save agent.
