@@ -200,7 +200,10 @@ class C51Agent(flax.struct.PyTreeNode):
         else:
             q = qs.mean(axis=0)
 
-        actions = n_actions[jnp.argmax(q)]
+        if len(q.shape) > 1:
+            actions = n_actions[jnp.arange(q.shape[0]), jnp.argmax(q, axis=-1)]
+        else:
+            actions = n_actions[jnp.argmax(q, axis=-1)]
 
         return actions
 

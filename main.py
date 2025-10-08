@@ -51,7 +51,7 @@ def main(_):
     if FLAGS.enable_wandb:
         setup_wandb(
             wandb_output_dir=FLAGS.save_dir,
-            project='fdrl', group=FLAGS.wandb_run_group, name=exp_name,
+            project='value-flows', group=FLAGS.wandb_run_group, name=exp_name,
             mode=FLAGS.wandb_mode
         )
     flag_dict = get_flag_dict()
@@ -75,7 +75,7 @@ def main(_):
         if dataset is not None:
             dataset.p_aug = FLAGS.p_aug
             dataset.frame_stack = FLAGS.frame_stack
-            if config['agent_name'] in ['rebrac', 'fdrl']:
+            if config['agent_name'] in ['rebrac']:
                 dataset.return_next_actions = True
 
     # Create agent.

@@ -397,12 +397,10 @@ def get_config():
             kappa=0.9,  # Quantile regression threshold.
             quantile_agg='mean',  # Aggregation method for quantiles.
             clip_flow_actions=True,  # Whether to clip the intermediate flow actions.
-            actor_loss='sfbc',  # Actor loss type ('sfbc', 'ddpgbc').
             alpha=10.0,  # Distillation coefficient in DDPG+BC.
             alpha_penalty=1.0,  # Penalty coefficient.
             num_quantiles=16,  # Number of quantile samples for estimating Q.
             num_logsumexp_samples=10,  # Number of action samples for estimating logsumexp.
-            num_rs_samples=16,  # Number of action samples for rejection sampling.
             num_flow_steps=10,  # Number of flow steps.
             normalize_q_loss=False,  # Whether to normalize the Q loss.
             encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).

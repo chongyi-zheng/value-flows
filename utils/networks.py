@@ -138,7 +138,6 @@ class ValueVectorField(nn.Module):
     hidden_dims: Sequence[int]
     value_dim: int = 1
     layer_norm: bool = False
-    dropout_rate: float = 0.0
     num_ensembles: int = 2
     encoder: nn.Module = None
 
@@ -146,8 +145,8 @@ class ValueVectorField(nn.Module):
         mlp_class = MLP
         if self.num_ensembles > 1:
             mlp_class = ensemblize(mlp_class, self.num_ensembles)
-        value_net = mlp_class((*self.hidden_dims, self.value_dim), activate_final=False,
-                              layer_norm=self.layer_norm, dropout_rate=self.dropout_rate)
+        value_net = mlp_class((*self.hidden_dims, self.value_dim),
+                              activate_final=False, layer_norm=self.layer_norm)
 
         self.value_net = value_net
 

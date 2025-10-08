@@ -190,9 +190,9 @@ class IQNAgent(flax.struct.PyTreeNode):
              self.config['action_dim'])
         )
         n_observations = jnp.repeat(
-            jnp.expand_dims(observations, 0),
+            jnp.expand_dims(observations, -2),
             self.config['num_samples'],
-            axis=0,
+            axis=-2,
         )
         n_actions = self.compute_flow_actions(n_noises, n_observations)
 
@@ -204,7 +204,11 @@ class IQNAgent(flax.struct.PyTreeNode):
             quantiles = quantiles.mean(axis=0)
         q = jnp.mean(quantiles.squeeze(-1), axis=-1)
 
-        actions = n_actions[jnp.argmax(q)]
+        if len(q.shape) > 1:
+            actions = n_actions[jnp.arange(q.shape[0]), jnp.argmax(q, axis=-1)]
+        else:
+            actions = n_actions[jnp.argmax(q, axis=-1)]
+
         return actions
 
     @classmethod

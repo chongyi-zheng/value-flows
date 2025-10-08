@@ -14,9 +14,38 @@
 
 ## Overview
 
-Value Flows is a RL algorithm.
+Value Flows is an RL algorithm using flow-matching methods to model the return distribution.
 
 This repository contains code for running the Value Flows algorithm and four baselines: FBRAC, C51, IQN, and CODAC. For other baselines, the implementations can be found in the official [FQL](https://github.com/seohongpark/fql) repository.
+
+## Installation
+
+1. Create an Anaconda environment: `conda create -n value-flows python=3.10.13 -y`
+2. Activate the environment: `conda activate value-flows`
+3. Install the dependencies:
+   ```
+   conda install -c conda-forge glew -y
+   conda install -c conda-forge mesalib -y
+   pip install -r requirements.txt
+   ```
+3. Setup `MuJoCo 2.1.0` for D4RL environments
+   ```
+   mkdir ~/.mujoco
+   cd ~/.mujoco
+   wget https://roboti.us/file/mjkey.txt
+   wget https://github.com/google-deepmind/mujoco/releases/download/2.1.0/mujoco210-linux-x86_64.tar.gz
+   tar -xvzf mujoco210-linux-x86_64.tar.gz
+   rm mujoco210-linux-x86_64.tar.gz
+   ```
+4. Export environment variables
+   ```
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia:/home/cz8792/.mujoco/mujoco210/bin
+   export PYTHONPATH=path_to_value_flows_dir
+   export MUJOCO_GL=egl
+   export PYOPENGL_PLATFORM=egl
+   ```
+
+## Running experiments
 
 ```
 
