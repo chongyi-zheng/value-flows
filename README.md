@@ -1,23 +1,5 @@
 <div align="center">
 
-[//]: # (<div id="user-content-toc" style="margin-bottom: 50px">)
-
-[//]: # (  <ul align="center" style="list-style: none;">)
-
-[//]: # (    <summary>)
-
-[//]: # (      <h1 style="font-size:1.76rem">)
-
-[//]: # (        Value Flows)
-
-[//]: # (      </h1>)
-
-[//]: # (    </summary>)
-
-[//]: # (  </ul>)
-
-[//]: # (</div>)
-
 <div id="user-content-toc" style="margin-bottom: 50px">
   <ul align="center" style="list-style: none;">
     <summary>
