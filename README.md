@@ -33,7 +33,7 @@
   </ul>
 </div>
 
-<img src="assets/value_flows.png" width="80%">
+<img src="assets/value_flows.jpg" width="60%">
 
 
 </div>
