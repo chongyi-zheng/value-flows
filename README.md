@@ -1,14 +1,40 @@
 <div align="center">
 
+[//]: # (<div id="user-content-toc" style="margin-bottom: 50px">)
+
+[//]: # (  <ul align="center" style="list-style: none;">)
+
+[//]: # (    <summary>)
+
+[//]: # (      <h1 style="font-size:1.76rem">)
+
+[//]: # (        Value Flows)
+
+[//]: # (      </h1>)
+
+[//]: # (    </summary>)
+
+[//]: # (  </ul>)
+
+[//]: # (</div>)
+
 <div id="user-content-toc" style="margin-bottom: 50px">
   <ul align="center" style="list-style: none;">
     <summary>
       <h1 style="font-size:1.76rem">
         Value Flows
       </h1>
+      <br>
+      <h2>
+        <a href="" style="font-size:20px;">Paper</a>&emsp;
+        <a href="https://perry-dong.github.io/value-flows" style="font-size:20px;">Website</a>
+      </h2>
     </summary>
   </ul>
 </div>
+
+<img src="assets/value_flows.png" width="80%">
+
 
 </div>
 
