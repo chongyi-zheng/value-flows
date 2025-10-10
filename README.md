@@ -134,8 +134,6 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 
 </details>
 
-<br/>
-
 <details>
 <summary><b>Click to expand the full list of commands for ReBRAC</b></summary>
 
@@ -152,8 +150,6 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 ```
 
 </details>
-
-<br/>
 
 <details>
 <summary><b>Click to expand the full list of commands for FBRAC</b></summary>
@@ -172,8 +168,6 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 
 </details>
 
-<br/>
-
 <details>
 <summary><b>Click to expand the full list of commands for IFQL</b></summary>
 
@@ -191,8 +185,6 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 
 </details>
 
-<br/>
-
 <details>
 <summary><b>Click to expand the full list of commands for FQL</b></summary>
 
@@ -209,8 +201,6 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 ```
 
 </details>
-
-<br/>
 
 <details>
 <summary><b>Click to expand the full list of commands for C51</b></summary>
@@ -311,5 +301,3 @@ python main.py --env_name=relocate-expert-v1 --agent=agents/codac.py --agent.alp
 ```
 
 </details>
-
-<br/>
