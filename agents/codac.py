@@ -398,7 +398,7 @@ def get_config():
             quantile_agg='mean',  # Aggregation method for quantiles.
             clip_flow_actions=True,  # Whether to clip the intermediate flow actions.
             alpha=10.0,  # Distillation coefficient in DDPG+BC.
-            alpha_penalty=1.0,  # Penalty coefficient.
+            alpha_penalty=0.1,  # Penalty coefficient.
             num_quantiles=16,  # Number of quantile samples for estimating Q.
             num_logsumexp_samples=10,  # Number of action samples for estimating logsumexp.
             num_flow_steps=10,  # Number of flow steps.

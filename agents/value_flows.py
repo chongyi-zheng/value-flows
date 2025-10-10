@@ -265,6 +265,7 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
         init_times=None,
         end_times=None,
     ):
+        """Compute actions from the BC flow model using the Euler method."""
         noisy_actions = noises
         if init_times is None:
             init_times = jnp.zeros((*noisy_actions.shape[:-1], 1), dtype=noisy_actions.dtype)
@@ -304,7 +305,7 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
         seed=None,
         temperature=1.0,
     ):
-        """Sample actions from the one-step policy."""
+        """Sample actions using rejection sampling."""
         action_seed, q_seed, ret_seed = jax.random.split(seed, 3)
         actor_noises = jax.random.normal(
             action_seed,

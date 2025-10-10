@@ -74,6 +74,7 @@ python main.py --env_name=cube-double-play-singletask-task2-v0 --online_steps=10
 We include the complete hyperparameters for each method below.
 
 ### Value Flows
+
 <details>
 <summary><b>Click to expand the full list of commands</b></summary>
 
@@ -114,272 +115,205 @@ python main.py --env_name=relocate-expert-v1 --agent=agents/value_flows.py --age
 
 ### Baselines
 
+For baselines, we copy most results from the Table 3 of [FQL](https://arxiv.org/pdf/2502.02538).
+
 <details>
-<summary><b>Click to expand the full list of commands</b></summary>
+<summary><b>Click to expand the full list of commands for IQL</b></summary>
 
 ```
-# cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=1 --agent.critic_loss_type=q-learning --agent.next_action_extraction=sfbc --agent.policy_extraction=sfbc --agent.ensemble_weight_type=target_ret_std_jac_est --agent.confidence_weight_temp=3
-
-# C51
-python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995 --agent.num_atoms=101 --agent.actor_loss=sfbc --agent.normalize_q_loss=True
-
-# IQN
-python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995 --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.actor_loss=sfbc --agent.normalize_q_loss=False
-
-# CODAC
-python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.discount=0.995 --agent.num_cosines=64 --agent.kappa=0.95 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=300 --agent.alpha_penalty=0.1 --agent.normalize_q_loss=False
-
-# puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=2 --agent.confidence_weight_temp=0.3  --agent.ret_agg=min
-
-# C51
-python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995 --agent.num_atoms=101 --agent.actor_loss=sfbc --agent.normalize_q_loss=True
-
-# IQN
-python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995 --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=mean --agent.actor_loss=sfbc --agent.normalize_q_loss=False
-
-# CODAC
-python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.discount=0.995 --agent.num_cosines=64 --agent.kappa=0.95 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=1000 --agent.alpha_penalty=0.1 --agent.normalize_q_loss=False
-
-# scene-play-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=1 --agent.confidence_weight_temp=0.3  --agent.ret_agg=min
-
-# C51
-python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.num_atoms=51 --agent.actor_loss=sfbc --agent.normalize_q_loss=True
-
-# IQN
-python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.95 --agent.quantile_agg=mean --agent.actor_loss=sfbc --agent.normalize_q_loss=False
-
-# CODAC
-python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.95 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=100 --agent.alpha_penalty=0.1 --agent.normalize_q_loss=False
-
-
-# puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=100 --agent.q_agg=min
-
-# C51
-python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.num_atoms=101 --agent.q_agg=min --agent.actor_loss=sfbc --agent.normalize_q_loss=True
-
-# IQN
-python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.95 --agent.quantile_agg=mean --agent.actor_loss=sfbc --agent.normalize_q_loss=False
-
-# CODAC
-python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.95 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=1000 --agent.alpha_penalty=0.1 --agent.normalize_q_loss=False
-
-# cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.03
-
-# FQL
-python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/fql.py --agent.discount=0.995 --agent.alpha=300
-
-# C51
-python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995 --agent.num_atoms=51 --agent.actor_loss=sfbc --agent.normalize_q_loss=True
-
-# IQN
-python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995 --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=mean --agent.actor_loss=sfbc --agent.normalize_q_loss=False
-
-# CODAC
-python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.discount=0.995 --agent.num_cosines=64 --agent.kappa=0.95 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=100 --agent.alpha_penalty=0.1 --agent.normalize_q_loss=False
-
-# visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.03 --agent.encoder=impala_small
-
-# FQL
-python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=100 --agent.encoder=impala_small
-
-# IQL
-python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.expectile=0.9 --agent.alpha=1.0 --agent.encoder=impala_small
-
-# ReBRAC
-python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.003 --agent.alpha_critic=0.01 --agent.encoder=impala_small
-
-# IFQL
-python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.expectile=0.9 --agent.num_samples=32 --agent.encoder=impala_small
-
-# FBRAC
-python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=100 --agent.normalize_q_loss=False --agent.encoder=impala_small
-
-# IQN
-python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.encoder=impala_small
-
-# visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0  --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.03 --agent.encoder=impala_small
-
-# FQL
-python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=100 --agent.encoder=impala_small
-
-# IQL
-python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.expectile=0.9 --agent.alpha=1.0 --agent.encoder=impala_small
-
-# ReBRAC
-python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.003 --agent.alpha_critic=0.01 --agent.encoder=impala_small
-
-# IFQL
-python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.expectile=0.9 --agent.num_samples=32 --agent.encoder=impala_small
-
-# FBRAC
-python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=100 --agent.normalize_q_loss=False --agent.encoder=impala_small
-
-# IQN
-python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.encoder=impala_small
-
-# visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=1 --agent.confidence_weight_temp=0.3 --agent.encoder=impala_small
-
-# FQL
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.discount=0.995 --agent.alpha=100 --agent.encoder=impala_small
-
-# IQL
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0  --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.discount=0.995 --agent.expectile=0.9 --agent.alpha=0.3 --agent.encoder=impala_small
-
-# ReBRAC
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.discount=0.995 --agent.alpha_actor=0.1 --agent.alpha_critic=0 --agent.encoder=impala_small
-
-# IFQL
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.discount=0.995 --agent.expectile=0.9 --agent.num_samples=32 --agent.encoder=impala_small
-
-# FBRAC
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.discount=0.995 --agent.alpha=100 --agent.normalize_q_loss=False --agent.encoder=impala_small
-
-# IQN
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.encoder=impala_small
-
-# visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=1 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.encoder=impala_small
-
-# FQL
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=100 --agent.encoder=impala_small
-
-# IQL
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0  --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.expectile=0.9 --agent.alpha=10.0 --agent.encoder=impala_small
-
-# ReBRAC
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.1 --agent.alpha_critic=0.01 --agent.encoder=impala_small
-
-# IFQL
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.expectile=0.9 --agent.num_samples=32 --agent.encoder=impala_small
-
-# FBRAC
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=100 --agent.normalize_q_loss=False --agent.encoder=impala_small
-
-# IQN
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.95 --agent.encoder=impala_small
-
-# visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0
-# value_flows
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --p_aug=0.5 --frame_stack=3 --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.encoder=impala_small
-
-# FQL
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=100 --agent.encoder=impala_small
-
-# IQL
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0  --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.expectile=0.9 --agent.alpha=10.0 --agent.encoder=impala_small
-
-# ReBRAC
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.3 --agent.alpha_critic=0.01 --agent.encoder=impala_small
-
-# IFQL
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.expectile=0.9 --agent.num_samples=32 --agent.encoder=impala_small
-
-# FBRAC
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=300 --agent.normalize_q_loss=False --agent.encoder=impala_small
-
-# IQN
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.encoder=impala_small
-
-# pen-{human, cloned, expert}-v1
-# value_flows
-python main.py --env_name=pen-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=pen-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=pen-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-
-# IQN
-python main.py --env_name=pen-human-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=pen-cloned-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=pen-expert-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=min --agent.normalize_q_loss=True
-
-# C51
-python main.py --env_name=pen-human-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.q_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=pen-cloned-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.normalize_q_loss=True
-python main.py --env_name=pen-expert-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.q_agg=min --agent.normalize_q_loss=True
-
-# CODAC
-python main.py --env_name=pen-human-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=10000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-python main.py --env_name=pen-cloned-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=10000 --agent.penalty=0.1 --agent.normalize_q_loss=False
-python main.py --env_name=pen-expert-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=10000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-
-# door-{human, cloned, expert}-v1
-# value_flows
-python main.py --env_name=door-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=door-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.1 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=door-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.1 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-
-# IQN
-python main.py --env_name=door-human-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=door-cloned-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=door-expert-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.normalize_q_loss=True
-
-# C51
-python main.py --env_name=door-human-v1 --agent=agents/c51.py --agent.num_atoms=101 --agent.normalize_q_loss=True
-python main.py --env_name=door-cloned-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.q_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=door-expert-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.normalize_q_loss=True
-
-# CODAC
-python main.py --env_name=door-human-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=10000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-python main.py --env_name=door-cloned-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=30000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-python main.py --env_name=door-expert-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=10000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-
-# hammer-{human, cloned, expert}-v1
-# value_flows
-python main.py --env_name=hammer-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=hammer-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.1 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-
-# IQN
-python main.py --env_name=hammer-human-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.7 --agent.quantile_agg=mean --agent.normalize_q_loss=True
-python main.py --env_name=hammer-cloned-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.7 --agent.quantile_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=hammer-expert-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.7 --agent.quantile_agg=mean --agent.normalize_q_loss=True
-
-# C51
-python main.py --env_name=hammer-human-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.normalize_q_loss=True
-python main.py --env_name=hammer-cloned-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.normalize_q_loss=True
-python main.py --env_name=hammer-expert-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.q_agg=min --agent.normalize_q_loss=True
-
-# CODAC
-python main.py --env_name=hammer-human-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=30000 --agent.penalty=0.1 --agent.normalize_q_loss=False
-python main.py --env_name=hammer-cloned-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=10000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-python main.py --env_name=hammer-expert-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.8 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=10000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-
-# relocate-{human, cloned, expert}-v1
-# value_flows
-python main.py --env_name=relocate-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.1 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=relocate-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=relocate-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-
-# IQN
-python main.py --env_name=relocate-human-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.normalize_q_loss=True
-python main.py --env_name=relocate-cloned-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.normalize_q_loss=True
-python main.py --env_name=relocate-expert-v1 --agent=agents/iqn.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=min --agent.normalize_q_loss=True
-
-# C51
-python main.py --env_name=relocate-human-v1 --agent=agents/c51.py --agent.num_atoms=101 --agent.q_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=relocate-cloned-v1 --agent=agents/c51.py --agent.num_atoms=51 --agent.q_agg=min --agent.normalize_q_loss=True
-python main.py --env_name=relocate-expert-v1 --agent=agents/c51.py --agent.num_atoms=101 --agent.q_agg=min --agent.normalize_q_loss=True
-
-# CODAC
-python main.py --env_name=relocate-human-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=30000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-python main.py --env_name=relocate-cloned-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=30000 --agent.penalty=0.01 --agent.normalize_q_loss=False
-python main.py --env_name=relocate-expert-v1 --agent=agents/codac.py --agent.num_cosines=64 --agent.kappa=0.9 --agent.quantile_agg=mean --agent.actor_loss=ddpgbc --agent.alpha=10000 --agent.penalty=0.1 --agent.normalize_q_loss=False
+# IQL on OGBench tasks
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/fbrac.py --agent.discount=0.995 --agent.alpha=10
+
+# IQL on visual OGBench tasks
+python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.alpha=1 --agent.encoder=impala_small
+python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.alpha=1 --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.discount=0.995 --agent.alpha=0.3 --agent.encoder=impala_small
+python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.alpha=10 --agent.encoder=impala_small
+python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.alpha=10 --agent.encoder=impala_small
 ```
 
 </details>
+
+<br/>
+
+<details>
+<summary><b>Click to expand the full list of commands for ReBRAC</b></summary>
+
+```
+# ReBRAC on OGBench tasks
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/rebrac.py --agent.discount=0.995 --agent.alpha_actor=0.03 --agent.alpha_critic=0.0
+
+# ReBRAC on visual OGBench tasks
+python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.01 --agent.alpha_critic=0.003 --agent.encoder=impala_small
+python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.01 --agent.alpha_critic=0.003 --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.discount=0.995 --agent.alpha_actor=0.1 --agent.alpha_critic=0.0 --agent.encoder=impala_small
+python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.3 --agent.alpha_critic=0.01 --agent.encoder=impala_small
+python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.1 --agent.alpha_critic=0.003 --agent.encoder=impala_small
+```
+
+</details>
+
+<br/>
+
+<details>
+<summary><b>Click to expand the full list of commands for FBRAC</b></summary>
+
+```
+# FBRAC on OGBench tasks
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/fbrac.py --agent.discount=0.995 --agent.alpha=100
+
+# FBRAC on visual OGBench tasks
+python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=100 --agent.encoder=impala_small
+python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=100 --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.discount=0.995 --agent.alpha=100 --agent.encoder=impala_small
+python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=100 --agent.encoder=impala_small
+python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=100 --agent.encoder=impala_small
+```
+
+</details>
+
+<br/>
+
+<details>
+<summary><b>Click to expand the full list of commands for IFQL</b></summary>
+
+```
+# FBRAC on OGBench tasks
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/ifql.py --agent.discount=0.995 --agent.num_samples=32
+
+# FBRAC on visual OGBench tasks
+python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.num_samples=32 --agent.encoder=impala_small
+python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.num_samples=32 --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.discount=0.995 --agent.num_samples=32 --agent.encoder=impala_small
+python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.num_samples=32 --agent.encoder=impala_small
+python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.num_samples=32 --agent.encoder=impala_small
+```
+
+</details>
+
+<br/>
+
+<details>
+<summary><b>Click to expand the full list of commands for FQL</b></summary>
+
+```
+# FQL on OGBench tasks
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/fql.py --agent.discount=0.995 --agent.alpha=300
+
+# FQL on visual OGBench tasks
+python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=100 --agent.encoder=impala_small
+python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=100 --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.discount=0.995 --agent.alpha=100 --agent.encoder=impala_small
+python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=100 --agent.encoder=impala_small
+python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=300 --agent.encoder=impala_small
+```
+
+</details>
+
+<br/>
+
+<details>
+<summary><b>Click to expand the full list of commands for C51</b></summary>
+
+```
+# C51 on OGBench tasks
+python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995 --agent.num_atoms=101
+python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995 --agent.num_atoms=101
+python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py
+python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.num_atoms=101 --agent.q_agg=min
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995
+
+# C51 on D4RL tasks
+python main.py --env_name=pen-human-v1 --agent=agents/c51.py --agent.q_agg=min
+python main.py --env_name=pen-cloned-v1 --agent=agents/c51.py
+python main.py --env_name=pen-expert-v1 --agent=agents/c51.py --agent.q_agg=min
+
+python main.py --env_name=door-human-v1 --agent=agents/c51.py --agent.num_atoms=101
+python main.py --env_name=door-cloned-v1 --agent=agents/c51.py --agent.q_agg=min
+python main.py --env_name=door-expert-v1 --agent=agents/c51.py
+
+python main.py --env_name=hammer-human-v1 --agent=agents/c51.py
+python main.py --env_name=hammer-cloned-v1 --agent=agents/c51.py
+python main.py --env_name=hammer-expert-v1 --agent=agents/c51.py --agent.q_agg=min
+
+python main.py --env_name=relocate-human-v1 --agent=agents/c51.py --agent.num_atoms=101 --agent.q_agg=min
+python main.py --env_name=relocate-cloned-v1 --agent=agents/c51.py --agent.q_agg=min
+python main.py --env_name=relocate-expert-v1 --agent=agents/c51.py --agent.num_atoms=101 --agent.q_agg=min
+```
+
+</details>
+
+<br/>
+
+<details>
+<summary><b>Click to expand the full list of commands for IQN</b></summary>
+
+```
+# IQN on OGBench tasks
+python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995
+python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995 --agent.kappa=0.8
+python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.kappa=0.95
+python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.kappa=0.95
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995 --agent.kappa=0.8
+
+# IQN on visual OGBench tasks
+python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.encoder=impala_small
+python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.kappa=0.8 --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.encoder=impala_small
+python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.kappa=0.95 --agent.encoder=impala_small
+python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.kappa=0.8 --agent.encoder=impala_small
+
+# IQN on D4RL tasks
+python main.py --env_name=pen-human-v1 --agent=agents/iqn.py --agent.kappa=0.8 --agent.quantile_agg=min
+python main.py --env_name=pen-cloned-v1 --agent=agents/iqn.py --agent.kappa=0.8 --agent.quantile_agg=min
+python main.py --env_name=pen-expert-v1 --agent=agents/iqn.py --agent.kappa=0.8 --agent.quantile_agg=min
+
+python main.py --env_name=door-human-v1 --agent=agents/iqn.py --agent.quantile_agg=min
+python main.py --env_name=door-cloned-v1 --agent=agents/iqn.py --agent.quantile_agg=min
+python main.py --env_name=door-expert-v1 --agent=agents/iqn.py
+
+python main.py --env_name=hammer-human-v1 --agent=agents/iqn.py --agent.kappa=0.7
+python main.py --env_name=hammer-cloned-v1 --agent=agents/iqn.py --agent.kappa=0.7 --agent.quantile_agg=min
+python main.py --env_name=hammer-expert-v1 --agent=agents/iqn.py --agent.kappa=0.7
+
+python main.py --env_name=relocate-human-v1 --agent=agents/iqn.py
+python main.py --env_name=relocate-cloned-v1 --agent=agents/iqn.py
+python main.py --env_name=relocate-expert-v1 --agent=agents/iqn.py --agent.quantile_agg=min
+```
+
+</details>
+
+<br/>
+
+<details>
+<summary><b>Click to expand the full list of commands for CODAC</b></summary>
+
+```
+# CODAC on OGBench tasks
+python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.discount=0.995 --agent.kappa=0.95 --agent.alpha=300
+python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.discount=0.995 --agent.kappa=0.95 --agent.alpha=1000
+python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.kappa=0.95 --agent.alpha=100
+python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.kappa=0.95 --agent.alpha=1000
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/codac.py --agent.discount=0.995 --agent.kappa=0.95 --agent.alpha=100
+
+# CODAC on D4RL tasks
+python main.py --env_name=pen-human-v1 --agent=agents/codac.py --agent.kappa=0.8 --agent.alpha=10000 --agent.alpha_penalty=0.01
+python main.py --env_name=pen-cloned-v1 --agent=agents/codac.py --agent.kappa=0.8 --agent.alpha=10000
+python main.py --env_name=pen-expert-v1 --agent=agents/codac.py --agent.kappa=0.8 --agent.alpha=10000 --agent.alpha_penalty=0.01
+
+python main.py --env_name=door-human-v1 --agent=agents/codac.py --agent.alpha=10000 --agent.alpha_penalty=0.01
+python main.py --env_name=door-cloned-v1 --agent=agents/codac.py --agent.alpha=30000 --agent.alpha_penalty=0.01
+python main.py --env_name=door-expert-v1 --agent=agents/codac.py --agent.alpha=10000 --agent.alpha_penalty=0.01
+
+python main.py --env_name=hammer-human-v1 --agent=agents/codac.py --agent.kappa=0.8 --agent.alpha=30000
+python main.py --env_name=hammer-cloned-v1 --agent=agents/codac.py --agent.kappa=0.8 --agent.alpha=10000 --agent.alpha_penalty=0.01
+python main.py --env_name=hammer-expert-v1 --agent=agents/codac.py --agent.kappa=0.8 --agent.alpha=10000 --agent.alpha_penalty=0.01
+
+python main.py --env_name=relocate-human-v1 --agent=agents/codac.py --agent.alpha=30000 --agent.alpha_penalty=0.01
+python main.py --env_name=relocate-cloned-v1 --agent=agents/codac.py --agent.alpha=30000 --agent.alpha_penalty=0.01
+python main.py --env_name=relocate-expert-v1 --agent=agents/codac.py --agent.alpha=10000
+```
+
+</details>
+
+<br/>
