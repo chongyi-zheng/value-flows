@@ -243,8 +243,6 @@ python main.py --env_name=relocate-expert-v1 --agent=agents/c51.py --agent.num_a
 
 </details>
 
-<br/>
-
 <details>
 <summary><b>Click to expand the full list of commands for IQN</b></summary>
 
@@ -282,8 +280,6 @@ python main.py --env_name=relocate-expert-v1 --agent=agents/iqn.py --agent.quant
 ```
 
 </details>
-
-<br/>
 
 <details>
 <summary><b>Click to expand the full list of commands for CODAC</b></summary>
