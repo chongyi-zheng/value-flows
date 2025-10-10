@@ -301,3 +301,7 @@ python main.py --env_name=relocate-expert-v1 --agent=agents/codac.py --agent.alp
 ```
 
 </details>
+
+## Acknowledgments
+
+This codebase is adapted from [OGBench](https://github.com/seohongpark/ogbench) and [FQL](https://github.com/seohongpark/fql) implementations.
