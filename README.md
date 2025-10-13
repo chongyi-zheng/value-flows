@@ -9,7 +9,7 @@
       <br>
       <h2>
         <a href="https://arxiv.org/abs/2510.07650" style="font-size:20px;">Paper</a>&emsp;
-        <a href="https://perry-dong.github.io/value-flows" style="font-size:20px;">Website</a>
+        <a href="https://pd-perry.github.io/value-flows" style="font-size:20px;">Website</a>
       </h2>
     </summary>
   </ul>
