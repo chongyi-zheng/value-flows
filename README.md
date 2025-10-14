@@ -47,7 +47,7 @@ This repository contains code for running the Value Flows algorithm and four bas
    ```
 4. Export environment variables
    ```
-   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia:/home/cz8792/.mujoco/mujoco210/bin
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia:$HOME/.mujoco/mujoco210/bin
    export PYTHONPATH=path_to_value_flows_dir
    export MUJOCO_GL=egl
    export PYOPENGL_PLATFORM=egl
