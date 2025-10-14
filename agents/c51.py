@@ -13,7 +13,7 @@ from utils.networks import ActorVectorField, Value
 
 
 class C51Agent(flax.struct.PyTreeNode):
-    """Categorical deep q-learning (C51) agent."""
+    """Categorical deep Q-learning (C51) agent."""
 
     rng: Any
     network: Any
