@@ -24,7 +24,7 @@
 
 Value Flows is an RL algorithm using flow-matching methods to model the return distribution.
 
-This repository contains code for running the Value Flows algorithm and four baselines: FBRAC, C51, IQN, and CODAC. For other baselines, the implementations can be found in the official [FQL](https://github.com/seohongpark/fql) repository.
+This repository contains code for running the Value Flows algorithm and 8 baselines: IQL, ReBRAC, FBRAC, IFQL, FQL, C51, IQN, and CODAC.
 
 ## Installation
 
