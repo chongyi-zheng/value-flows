@@ -399,7 +399,7 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
             num_ensembles=1,
             encoder=encoders.get('critic_flow'),
         )
-        # declare target critic explicit to prevent errors for visual tasks
+        # declare the target critics explicitly to prevent errors for visual tasks
         target_critic_flow1_def = ValueVectorField(
             hidden_dims=config['value_hidden_dims'],
             layer_norm=config['value_layer_norm'],
