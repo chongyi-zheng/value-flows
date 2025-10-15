@@ -465,7 +465,7 @@ def get_config():
             q_agg='mean',  # Aggregation method for Q values.
             clip_flow_actions=True,  # Whether to clip the intermediate flow actions.
             clip_flow_returns=True,  # Whether to clip flow returns.
-            confidence_weight_temp=10.0,  # Temperature for the confidence weights.
+            confidence_weight_temp=0.3,  # Temperature for the confidence weights.
             dcfm_lambda=1.0,  # distributional conditional flow matching loss coefficient.
             bcfm_lambda=1.0,  # bootstrapped conditional flow matching loss coefficient.
             num_samples=16,  # Number of action samples for rejection sampling.

@@ -59,13 +59,13 @@ The `agents` folder contains the implementation of algorithms and default hyperp
 
 ```
 # Value Flows on OGBench scene-play (offline RL)
-python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.confidence_weight_temp=0.3 --agent.ret_agg=min
+python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.ret_agg=min
 
 # Value Flows on D4RL hammer-cloned (offline RL)
-python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
+python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
 
 # Value Flows on OGBench visual-cube-double-play (offline RL)
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.discount=0.995 --agent.confidence_weight_temp=0.3 --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.discount=0.995 --agent.encoder=impala_small
 
 # Value Flows on OGBench scene-play (offline-to-online RL)
 python main.py --env_name=cube-double-play-singletask-task2-v0 --online_steps=1000000 --agent=agents/value_flows.py --agent.discount=0.995 --agent.confidence_weight_temp=3.0
@@ -81,34 +81,34 @@ We include the complete hyperparameters for each method below.
 ```
 # Value Flows on OGBench tasks
 python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.discount=0.995 --agent.confidence_weight_temp=3
-python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=0.5 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min
-python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.confidence_weight_temp=0.3 --agent.ret_agg=min
+python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=0.5 --agent.ret_agg=min
+python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.ret_agg=min
 python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=100 --agent.q_agg=min
 python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.03
 
 # Value Flows on visual OGBench tasks
 python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.03 --agent.encoder=impala_small
 python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0  --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.03 --agent.encoder=impala_small
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.discount=0.995 --agent.confidence_weight_temp=0.3 --agent.encoder=impala_small
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.encoder=impala_small
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.discount=0.995 --agent.encoder=impala_small
+python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.ret_agg=min --agent.encoder=impala_small
+python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.ret_agg=min --agent.encoder=impala_small
 
 # Value Flows on D4RL tasks
-python main.py --env_name=pen-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=pen-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=pen-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
+python main.py --env_name=pen-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=pen-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
+python main.py --env_name=pen-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
 
-python main.py --env_name=door-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=door-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=door-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=door-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
+python main.py --env_name=door-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=door-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.ret_agg=min --agent.q_agg=min
 
-python main.py --env_name=hammer-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=hammer-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=hammer-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
+python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
+python main.py --env_name=hammer-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.ret_agg=min --agent.q_agg=min
 
-python main.py --env_name=relocate-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=relocate-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.q_agg=min
-python main.py --env_name=relocate-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.3 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=relocate-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=relocate-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
+python main.py --env_name=relocate-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.ret_agg=min --agent.q_agg=min
 ```
 
 </details>
