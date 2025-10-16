@@ -15,7 +15,7 @@
   </ul>
 </div>
 
-<img src="assets/value_flows.png" width="60%">
+<img src="assets/value_flows_histograms.gif" width="100%">
 
 
 </div>
