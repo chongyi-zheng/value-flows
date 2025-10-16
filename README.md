@@ -24,7 +24,7 @@
 
 Value Flows is an RL algorithm that models the full return distribution via flow-matching and enforces Bellman consistency at every transition.
 
-This repository contains code for running the Value Flows algorithm and 8 baselines: IQL, ReBRAC, FBRAC, IFQL, FQL, C51, IQN, and CODAC.
+This repository contains code for running the Value Flows algorithm and 8 baselines in the offline setting. These baselines include IQL, ReBRAC, FBRAC, IFQL, FQL, C51, IQN, and CODAC.
 
 ## Installation
 
@@ -58,17 +58,14 @@ This repository contains code for running the Value Flows algorithm and 8 baseli
 The `agents` folder contains the implementation of algorithms and default hyperparameters. Here are some example commands to run experiments:
 
 ```
-# Value Flows on OGBench scene-play (offline RL)
+# Value Flows on OGBench scene-play
 python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.ret_agg=min
 
-# Value Flows on D4RL hammer-cloned (offline RL)
+# Value Flows on D4RL hammer-cloned
 python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
 
-# Value Flows on OGBench visual-cube-double-play (offline RL)
+# Value Flows on OGBench visual-cube-double-play
 python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.discount=0.995 --agent.encoder=impala_small
-
-# Value Flows on OGBench scene-play (offline-to-online RL)
-python main.py --env_name=cube-double-play-singletask-task2-v0 --online_steps=1000000 --agent=agents/value_flows.py --agent.discount=0.995 --agent.confidence_weight_temp=3.0
 ```
 
 We include the complete hyperparameters for each method below.
