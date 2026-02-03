@@ -126,8 +126,6 @@ python main.py --env_name=scene-play-singletask-task2-v0 --online_steps=1_000_00
 
 ### Baselines
 
-For baselines, we copy most results from the Table 3 of [FQL](https://arxiv.org/pdf/2502.02538).
-
 <details>
 <summary><b>Click to expand the full list of commands for IQL</b></summary>
 
