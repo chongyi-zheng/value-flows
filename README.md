@@ -24,7 +24,7 @@
 
 Value Flows is an RL algorithm that models the full return distribution via flow-matching and enforces Bellman consistency at every transition.
 
-This repository contains code for running the Value Flows algorithm and 8 baselines in the offline setting. These baselines include IQL, ReBRAC, FBRAC, IFQL, FQL, C51, IQN, and CODAC.
+This repository contains code for running the Value Flows algorithm and 8 baselines in the offline and offline-to-online setting. These baselines include IQL, ReBRAC, FBRAC, IFQL, FQL, C51, IQN, CODAC, and RLPD.
 
 ## Installation
 
@@ -36,12 +36,12 @@ This repository contains code for running the Value Flows algorithm and 8 baseli
    conda install -c conda-forge mesalib -y
    pip install -r requirements.txt
    ```
-3. Setup `MuJoCo 2.1.0` for D4RL environments
+3. Setup `MuJoCo 2.1` for D4RL environments
    ```
    mkdir ~/.mujoco
    cd ~/.mujoco
    wget https://roboti.us/file/mjkey.txt
-   wget https://github.com/google-deepmind/mujoco/releases/download/2.1.0/mujoco210-linux-x86_64.tar.gz
+   wget https://github.com/google-deepmind/mujoco/releases/download/2.1/mujoco210-linux-x86_64.tar.gz
    tar -xvzf mujoco210-linux-x86_64.tar.gz
    rm mujoco210-linux-x86_64.tar.gz
    ```
@@ -62,7 +62,7 @@ The `agents` folder contains the implementation of algorithms and default hyperp
 python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.ret_agg=min
 
 # Value Flows on D4RL hammer-cloned
-python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
+python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.q_agg=min
 
 # Value Flows on OGBench visual-cube-double-play
 python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.discount=0.995 --agent.encoder=impala_small
@@ -75,13 +75,15 @@ We include the complete hyperparameters for each method below.
 <details>
 <summary><b>Click to expand the full list of commands</b></summary>
 
+#### Offline RL
+
 ```
 # Value Flows on OGBench tasks
 python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.discount=0.995 --agent.confidence_weight_temp=3
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.03
 python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=0.5 --agent.ret_agg=min
+python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.confidence_weight_temp=100 --agent.q_agg=min
 python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.ret_agg=min
-python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=100 --agent.q_agg=min
-python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=3.0 --agent.confidence_weight_temp=0.03
 
 # Value Flows on visual OGBench tasks
 python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.confidence_weight_temp=0.03 --agent.encoder=impala_small
@@ -91,21 +93,33 @@ python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, tas
 python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/value_flows.py --agent.bcfm_lambda=0.3 --agent.ret_agg=min --agent.encoder=impala_small
 
 # Value Flows on D4RL tasks
-python main.py --env_name=pen-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=pen-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
-python main.py --env_name=pen-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
+python main.py --env_name=pen-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=pen-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.q_agg=min
+python main.py --env_name=pen-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.q_agg=min
 
-python main.py --env_name=door-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
-python main.py --env_name=door-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=door-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=door-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.q_agg=min
+python main.py --env_name=door-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=door-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10 --agent.ret_agg=min --agent.q_agg=min
 
-python main.py --env_name=hammer-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
-python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
-python main.py --env_name=hammer-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=hammer-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.q_agg=min
+python main.py --env_name=hammer-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.q_agg=min
+python main.py --env_name=hammer-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10 --agent.ret_agg=min --agent.q_agg=min
 
-python main.py --env_name=relocate-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10.0 --agent.ret_agg=min --agent.q_agg=min
-python main.py --env_name=relocate-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.q_agg=min
-python main.py --env_name=relocate-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3.0 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=relocate-human-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=10 --agent.ret_agg=min --agent.q_agg=min
+python main.py --env_name=relocate-cloned-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.q_agg=min
+python main.py --env_name=relocate-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.ret_agg=min --agent.q_agg=min
+```
+
+#### Offline-to-online RL
+
+```
+# Value Flows on OGBench tasks
+python main.py --env_name=antmaze-large-navigate-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.bcfm_lambda=10 --agent.confidence_weight_temp=0.01 --agent.alpha=30 --agent.q_agg=min
+python main.py --env_name=humanoidmaze-medium-navigate-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.3 --agent.alpha=100 --agent.q_agg=min --agent.ret_agg=min
+python main.py --env_name=cube-double-play-singletask-task2-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=1 --agent.confidence_weight_temp=3 --agent.alpha=300
+python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.03 --agent.alpha=300
+python main.py --env_name=puzzle-4x4-play-singletask-task4-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.confidence_weight_temp=100 --agent.alpha=300  --agent.q_agg=min
+python main.py --env_name=scene-play-singletask-task2-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.bcfm_lambda=1 --agent.confidence_weight_temp=0.3 --agent.alpha=300 --agent.ret_agg=min
 ```
 
 </details>
@@ -117,9 +131,13 @@ For baselines, we copy most results from the Table 3 of [FQL](https://arxiv.org/
 <details>
 <summary><b>Click to expand the full list of commands for IQL</b></summary>
 
+#### Offline RL
+
 ```
 # IQL on OGBench tasks
-python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/fbrac.py --agent.discount=0.995 --agent.alpha=10
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iql.py --agent.discount=0.995 --agent.alpha=10
+
+# For other OGBench tasks and D4RL tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
 
 # IQL on visual OGBench tasks
 python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.alpha=1 --agent.encoder=impala_small
@@ -129,14 +147,28 @@ python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, tas
 python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.alpha=10 --agent.encoder=impala_small
 ```
 
+#### Offline-to-online RL
+
+```
+# IQL on OGBench tasks
+python main.py --env_name=antmaze-large-navigate-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/iql.py --agent.alpha=10
+python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/iql.py --agent.discount=0.995 --agent.alpha=10
+
+# For other OGBench tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
+```
+
 </details>
 
 <details>
 <summary><b>Click to expand the full list of commands for ReBRAC</b></summary>
 
+#### Offline RL
+
 ```
 # ReBRAC on OGBench tasks
 python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/rebrac.py --agent.discount=0.995 --agent.alpha_actor=0.03 --agent.alpha_critic=0.0
+
+# For other OGBench tasks and D4RL tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
 
 # ReBRAC on visual OGBench tasks
 python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/rebrac.py --agent.alpha_actor=0.01 --agent.alpha_critic=0.003 --agent.encoder=impala_small
@@ -151,9 +183,13 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 <details>
 <summary><b>Click to expand the full list of commands for FBRAC</b></summary>
 
+#### Offline RL
+
 ```
 # FBRAC on OGBench tasks
 python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/fbrac.py --agent.discount=0.995 --agent.alpha=100
+
+# For other OGBench tasks and D4RL tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
 
 # FBRAC on visual OGBench tasks
 python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fbrac.py --agent.alpha=100 --agent.encoder=impala_small
@@ -168,16 +204,30 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 <details>
 <summary><b>Click to expand the full list of commands for IFQL</b></summary>
 
-```
-# FBRAC on OGBench tasks
-python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/ifql.py --agent.discount=0.995 --agent.num_samples=32
+#### Offline RL
 
-# FBRAC on visual OGBench tasks
-python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.num_samples=32 --agent.encoder=impala_small
-python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.num_samples=32 --agent.encoder=impala_small
-python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.discount=0.995 --agent.num_samples=32 --agent.encoder=impala_small
-python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.num_samples=32 --agent.encoder=impala_small
-python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.num_samples=32 --agent.encoder=impala_small
+```
+# IFQL on OGBench tasks
+python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/ifql.py --agent.discount=0.995
+
+# For other OGBench tasks and D4RL tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
+
+# IFQL on visual OGBench tasks
+python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.encoder=impala_small
+python main.py --env_name=visual-antmaze-teleport-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.encoder=impala_small
+python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.discount=0.995 --agent.encoder=impala_small
+python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.encoder=impala_small
+python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.encoder=impala_small
+```
+
+#### Offline-to-online RL
+
+```
+# IFQL on OGBench tasks
+python main.py --env_name=antmaze-large-navigate-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/ifql.py
+python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/ifql.py --agent.discount=0.995
+
+# For other OGBench tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
 ```
 
 </details>
@@ -185,9 +235,13 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 <details>
 <summary><b>Click to expand the full list of commands for FQL</b></summary>
 
+#### Offline RL
+
 ```
 # FQL on OGBench tasks
 python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/fql.py --agent.discount=0.995 --agent.alpha=300
+
+# For other OGBench tasks and D4RL tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
 
 # FQL on visual OGBench tasks
 python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=100 --agent.encoder=impala_small
@@ -197,18 +251,30 @@ python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, tas
 python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=300 --agent.encoder=impala_small
 ```
 
+#### Offline-to-online RL
+
+```
+# FQL on OGBench tasks
+python main.py --env_name=antmaze-large-navigate-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/fql.py --agent.alpha=10
+python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/fql.py --agent.discount=0.995 --agent.alpha=300
+
+# For other OGBench tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
+```
+
 </details>
 
 <details>
 <summary><b>Click to expand the full list of commands for C51</b></summary>
 
+#### Offline RL
+
 ```
 # C51 on OGBench tasks
 python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995 --agent.num_atoms=101
-python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995 --agent.num_atoms=101
-python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py
-python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.num_atoms=101 --agent.q_agg=min
 python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995
+python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.discount=0.995 --agent.num_atoms=101
+python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py --agent.num_atoms=101 --agent.q_agg=min
+python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/c51.py
 
 # C51 on D4RL tasks
 python main.py --env_name=pen-human-v1 --agent=agents/c51.py --agent.q_agg=min
@@ -233,13 +299,15 @@ python main.py --env_name=relocate-expert-v1 --agent=agents/c51.py --agent.num_a
 <details>
 <summary><b>Click to expand the full list of commands for IQN</b></summary>
 
+#### Offline RL
+
 ```
 # IQN on OGBench tasks
 python main.py --env_name=cube-double-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995
-python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995 --agent.kappa=0.8
-python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.kappa=0.95
-python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.kappa=0.95
 python main.py --env_name=cube-triple-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995 --agent.kappa=0.8
+python main.py --env_name=puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.discount=0.995 --agent.kappa=0.8
+python main.py --env_name=puzzle-4x4-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.kappa=0.95
+python main.py --env_name=scene-play-singletask-{task1, task2, task3, task4, task5}-v0 --agent=agents/iqn.py --agent.kappa=0.95
 
 # IQN on visual OGBench tasks
 python main.py --env_name=visual-antmaze-medium-navigate-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iqn.py --agent.encoder=impala_small
@@ -266,10 +334,24 @@ python main.py --env_name=relocate-cloned-v1 --agent=agents/iqn.py
 python main.py --env_name=relocate-expert-v1 --agent=agents/iqn.py --agent.quantile_agg=min
 ```
 
+#### Offline-to-online RL
+
+```
+# IQN on OGBench tasks
+python main.py --env_name=antmaze-large-navigate-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/iqn.py --agent.kappa=0.7
+python main.py --env_name=humanoidmaze-medium-navigate-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/iqn.py --agent.discount=0.995 --agent.kappa=0.7
+python main.py --env_name=cube-double-play-singletask-task2-v0 --online_steps=1_000_000 --agent=agents/iqn.py --agent.discount=0.995
+python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/iqn.py --agent.discount=0.995 --agent.kappa=0.8
+python main.py --env_name=puzzle-4x4-play-singletask-task4-v0 --online_steps=1_000_000 --agent=agents/iqn.py --agent.kappa=0.8
+python main.py --env_name=scene-play-singletask-task2-v0 --online_steps=1_000_000 --agent=agents/iqn.py --agent.kappa=0.95
+```
+
 </details>
 
 <details>
 <summary><b>Click to expand the full list of commands for CODAC</b></summary>
+
+#### Offline RL
 
 ```
 # CODAC on OGBench tasks
@@ -295,6 +377,22 @@ python main.py --env_name=hammer-expert-v1 --agent=agents/codac.py --agent.kappa
 python main.py --env_name=relocate-human-v1 --agent=agents/codac.py --agent.alpha=30000 --agent.alpha_penalty=0.01
 python main.py --env_name=relocate-cloned-v1 --agent=agents/codac.py --agent.alpha=30000 --agent.alpha_penalty=0.01
 python main.py --env_name=relocate-expert-v1 --agent=agents/codac.py --agent.alpha=10000
+```
+
+</details>
+
+
+<details>
+<summary><b>Click to expand the full list of commands for RLPD</b></summary>
+
+#### Offline-to-online RL
+
+```
+# RLPD on OGBench tasks
+python main.py --env_name=antmaze-large-navigate-singletask-task1-v0 --offline_steps=0 --online_steps=1_000_000 --balanced_sampling=1 --agent=agents/sac.py
+python main.py --env_name=cube-triple-play-singletask-task1-v0 --offline_steps=0 --online_steps=1_000_000 --balanced_sampling=1 --agent=agents/sac.py --agent.discount=0.995
+
+# For other OGBench tasks, we reuse the numbers from https://arxiv.org/abs/2502.02538.
 ```
 
 </details>

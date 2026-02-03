@@ -144,7 +144,7 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
     def actor_loss(self, batch, grad_params, rng):
         """Compute the BC flow actor loss."""
         batch_size, action_dim = batch['actions'].shape
-        rng, x_rng, t_rng = jax.random.split(rng, 3)
+        rng, x_rng, t_rng, actor_rng, q_rng = jax.random.split(rng, 5)
 
         # BC flow loss.
         x_0 = jax.random.normal(x_rng, (batch_size, action_dim))
@@ -154,13 +154,55 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
         vel = x_1 - x_0
 
         pred = self.network.select('actor_flow')(batch['observations'], x_t, t, params=grad_params)
-        actor_loss = jnp.mean((pred - vel) ** 2)
+        bc_flow_loss = jnp.mean((pred - vel) ** 2)
+        
+        noises = jax.random.normal(actor_rng, (batch_size, action_dim))
+        target_flow_actions = self.compute_flow_actions(noises, batch['observations'])
+        actor_actions = self.network.select('actor_onestep_flow')(
+            batch['observations'], noises, params=grad_params)
+        actor_actions = jnp.clip(actor_actions, -1, 1)
+        distill_loss = jnp.mean((actor_actions - target_flow_actions) ** 2)
 
-        info = {
+        q_noises = jax.random.normal(q_rng, (batch_size, 1))
+        q1 = (q_noises + self.network.select('critic_flow1')(
+            q_noises, jnp.zeros_like(q_noises), batch['observations'], actor_actions)).squeeze(-1)
+        q2 = (q_noises + self.network.select('critic_flow2')(
+            q_noises, jnp.zeros_like(q_noises), batch['observations'], actor_actions)).squeeze(-1)
+        if self.config['clip_flow_returns']:
+            q1 = jnp.clip(
+                q1,
+                self.config['min_reward'] / (1 - self.config['discount']),
+                self.config['max_reward'] / (1 - self.config['discount']),
+            )
+            q2 = jnp.clip(
+                q2,
+                self.config['min_reward'] / (1 - self.config['discount']),
+                self.config['max_reward'] / (1 - self.config['discount']),
+            )
+        if self.config['q_agg'] == 'min':
+            q = jnp.minimum(q1, q2)
+        else:
+            q = (q1 + q2) / 2
+        
+        q_loss = -q.mean()
+        if self.config['normalize_q_loss']:
+            lam = jax.lax.stop_gradient(1 / jnp.abs(q).mean())
+            q_loss = lam * q_loss
+
+        actor_loss = bc_flow_loss + self.config['alpha'] * distill_loss + q_loss
+
+        # Additional metrics for logging.
+        actions = self.sample_actions(batch['observations'], seed=rng)
+        mse = jnp.mean((actions - batch['actions']) ** 2)
+
+        return actor_loss, {
             'actor_loss': actor_loss,
+            'bc_flow_loss': bc_flow_loss,
+            'distill_loss': distill_loss,
+            'q_loss': q_loss,
+            'q': q.mean(),
+            'mse': mse,
         }
-
-        return actor_loss, info
 
     @jax.jit
     def total_loss(self, batch, grad_params, rng=None):
@@ -298,57 +340,68 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
 
         return noisy_actions
 
-    @jax.jit
+    @partial(jax.jit, static_argnames=('policy_extraction'))
     def sample_actions(
         self,
         observations,
         seed=None,
         temperature=1.0,
+        policy_extraction='rs',
     ):
         """Sample actions using rejection sampling."""
-        action_seed, q_seed, ret_seed = jax.random.split(seed, 3)
-        actor_noises = jax.random.normal(
-            action_seed,
-            (*observations.shape[: -len(self.config['ob_dims'])],
-             self.config['num_samples'], self.config['action_dim'])
-        )
-        n_observations = jnp.repeat(
-            jnp.expand_dims(observations, -2),
-            self.config['num_samples'],
-            axis=-2,
-        )
-        flow_actions = self.compute_flow_actions(actor_noises, n_observations)
+        action_seed, q_seed = jax.random.split(seed)
 
-        q_noises = jax.random.normal(
-            q_seed,
-            (*observations.shape[: -len(self.config['ob_dims'])], self.config['num_samples'], 1)
-        )
-
-        q1 = (q_noises + self.network.select('critic_flow1')(
-            q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
-        q2 = (q_noises + self.network.select('critic_flow2')(
-            q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
-        if self.config['clip_flow_returns']:
-            q1 = jnp.clip(
-                q1,
-                self.config['min_reward'] / (1 - self.config['discount']),
-                self.config['max_reward'] / (1 - self.config['discount']),
+        if policy_extraction == 'rs':  # rejection sampling
+            actor_noises = jax.random.normal(
+                action_seed,
+                (*observations.shape[: -len(self.config['ob_dims'])],
+                self.config['num_samples'], self.config['action_dim'])
             )
-            q2 = jnp.clip(
-                q2,
-                self.config['min_reward'] / (1 - self.config['discount']),
-                self.config['max_reward'] / (1 - self.config['discount']),
+            n_observations = jnp.repeat(
+                jnp.expand_dims(observations, -2),
+                self.config['num_samples'],
+                axis=-2,
+            )
+            flow_actions = self.compute_flow_actions(actor_noises, n_observations)
+            
+            q_noises = jax.random.normal(
+                q_seed,
+                (*observations.shape[: -len(self.config['ob_dims'])], self.config['num_samples'], 1)
             )
 
-        if self.config['q_agg'] == 'min':
-            q = jnp.minimum(q1, q2)
-        else:
-            q = (q1 + q2) / 2
+            q1 = (q_noises + self.network.select('critic_flow1')(
+                q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
+            q2 = (q_noises + self.network.select('critic_flow2')(
+                q_noises, jnp.zeros_like(q_noises), n_observations, flow_actions)).squeeze(-1)
+            if self.config['clip_flow_returns']:
+                q1 = jnp.clip(
+                    q1,
+                    self.config['min_reward'] / (1 - self.config['discount']),
+                    self.config['max_reward'] / (1 - self.config['discount']),
+                )
+                q2 = jnp.clip(
+                    q2,
+                    self.config['min_reward'] / (1 - self.config['discount']),
+                    self.config['max_reward'] / (1 - self.config['discount']),
+                )
 
-        if len(q.shape) > 1:
-            actions = flow_actions[jnp.arange(q.shape[0]), jnp.argmax(q, axis=-1)]
-        else:
-            actions = flow_actions[jnp.argmax(q, axis=-1)]
+            if self.config['q_agg'] == 'min':
+                q = jnp.minimum(q1, q2)
+            else:
+                q = (q1 + q2) / 2
+
+            if len(q.shape) > 1:
+                actions = flow_actions[jnp.arange(q.shape[0]), jnp.argmax(q, axis=-1)]
+            else:
+                actions = flow_actions[jnp.argmax(q, axis=-1)]
+        elif policy_extraction == 'rpg':  # reparameterized policy gradient
+            actor_noises = jax.random.normal(
+                action_seed,
+                (*observations.shape[: -len(self.config['ob_dims'])], self.config['action_dim'])
+            )
+            
+            actions = self.network.select('actor_onestep_flow')(observations, actor_noises)
+            actions = jnp.clip(actions, -1, 1)
 
         return actions
 
@@ -385,6 +438,7 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
             encoders['critic_flow'] = encoder_module()
             encoders['target_critic_flow'] = encoder_module()
             encoders['actor_flow'] = encoder_module()
+            encoders['actor_onestep_flow'] = encoder_module()
 
         # Define networks.
         critic_flow1_def = ValueVectorField(
@@ -418,6 +472,12 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
             layer_norm=config['actor_layer_norm'],
             encoder=encoders.get('actor_flow'),
         )
+        actor_onestep_flow_def = ActorVectorField(
+            hidden_dims=config['actor_hidden_dims'],
+            action_dim=action_dim,
+            layer_norm=config['actor_layer_norm'],
+            encoder=encoders.get('actor_onestep_flow'),
+        )
 
         network_info = dict(
             critic_flow1=(critic_flow1_def, (ex_returns, ex_times, ex_observations, ex_actions)),
@@ -425,6 +485,7 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
             target_critic_flow1=(target_critic_flow1_def, (ex_returns, ex_times, ex_observations, ex_actions)),
             target_critic_flow2=(target_critic_flow2_def, (ex_returns, ex_times, ex_observations, ex_actions)),
             actor_flow=(actor_flow_def, (ex_observations, ex_actions, ex_times)),
+            actor_onestep_flow=(actor_onestep_flow_def, (ex_observations, ex_actions)),
         )
         networks = {k: v[0] for k, v in network_info.items()}
         network_args = {k: v[1] for k, v in network_info.items()}
@@ -466,8 +527,10 @@ def get_config():
             clip_flow_actions=True,  # Whether to clip the intermediate flow actions.
             clip_flow_returns=True,  # Whether to clip flow returns.
             confidence_weight_temp=0.3,  # Temperature for the confidence weights.
-            dcfm_lambda=1.0,  # distributional conditional flow matching loss coefficient.
-            bcfm_lambda=1.0,  # bootstrapped conditional flow matching loss coefficient.
+            dcfm_lambda=1.0,  # Distributional conditional flow matching loss coefficient.
+            bcfm_lambda=1.0,  # Bootstrapped conditional flow matching loss coefficient.
+            alpha=10.0,  # Flow distillation coefficient.
+            normalize_q_loss=False,  # Whether to normalize the Q loss.
             num_samples=16,  # Number of action samples for rejection sampling.
             num_flow_steps=10,  # Number of flow steps.
             encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).

@@ -4,6 +4,7 @@ import json
 import random
 import time
 
+import jax
 import numpy as np
 import tqdm
 import wandb
@@ -12,15 +13,15 @@ from ml_collections import config_flags
 
 from agents import agents
 from envs.env_utils import make_env_and_datasets
-from utils.datasets import Dataset
-from utils.evaluation import evaluate
+from utils.datasets import Dataset, ReplayBuffer
+from utils.evaluation import evaluate, flatten
 from utils.flax_utils import restore_agent, save_agent
 from utils.log_utils import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('enable_wandb', 1, 'Whether to use wandb.')
-flags.DEFINE_string('wandb_run_group', 'debug', 'Run group.')
+flags.DEFINE_string('wandb_run_group', 'ValueFlows', 'Run group.')
 flags.DEFINE_string('wandb_mode', 'offline', 'Wandb mode.')
 flags.DEFINE_integer('seed', 0, 'Random seed.')
 flags.DEFINE_string('env_name', 'antmaze-large-navigate-v0', 'Environment (dataset) name.')
@@ -28,7 +29,9 @@ flags.DEFINE_string('save_dir', 'exp/', 'Save directory.')
 flags.DEFINE_string('restore_path', None, 'Restore path.')
 flags.DEFINE_integer('restore_epoch', None, 'Restore epoch.')
 
-flags.DEFINE_integer('train_steps', 1000000, 'Number of training steps.')
+flags.DEFINE_integer('offline_steps', 1000000, 'Number of offline steps.')
+flags.DEFINE_integer('online_steps', 0, 'Number of online steps.')
+flags.DEFINE_integer('buffer_size', 2000000, 'Replay buffer size.')
 flags.DEFINE_integer('log_interval', 5000, 'Logging interval.')
 flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval.')
 flags.DEFINE_integer('save_interval', 1000000, 'Saving interval.')
@@ -39,6 +42,7 @@ flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
 
 flags.DEFINE_float('p_aug', None, 'Probability of applying image augmentation.')
 flags.DEFINE_integer('frame_stack', None, 'Number of frames to stack.')
+flags.DEFINE_integer('balanced_sampling', 0, 'Whether to use balanced sampling for online fine-tuning.')
 
 config_flags.DEFINE_config_file('agent', 'agents/value_flows.py', lock_config=False)
 
@@ -63,6 +67,8 @@ def main(_):
     env, eval_env, train_dataset, val_dataset = make_env_and_datasets(FLAGS.env_name, frame_stack=FLAGS.frame_stack)
     if FLAGS.video_episodes > 0:
         assert 'singletask' in FLAGS.env_name, 'Rendering is currently only supported for OGBench environments.'
+    if FLAGS.online_steps > 0:
+        assert 'visual' not in FLAGS.env_name, 'Online fine-tuning is currently not supported for visual environments.'
 
     # Initialize agent.
     random.seed(FLAGS.seed)
@@ -70,8 +76,18 @@ def main(_):
 
     # Set up datasets.
     train_dataset = Dataset.create(**train_dataset)
+    # Use the training dataset as the replay buffer.
+    if FLAGS.balanced_sampling:
+        # Create a separate replay buffer so that we can sample from both the training dataset and the replay buffer.
+        example_transition = {k: v[0] for k, v in train_dataset.items()}
+        replay_buffer = ReplayBuffer.create(example_transition, size=FLAGS.buffer_size)
+    else:
+        # Use the training dataset as the replay buffer.
+        replay_buffer = ReplayBuffer.create_from_initial_dataset(
+            dict(train_dataset), size=max(FLAGS.buffer_size, train_dataset.size + 1)
+        )
     # Set p_aug and frame_stack.
-    for dataset in [train_dataset, val_dataset]:
+    for dataset in [train_dataset, val_dataset, replay_buffer]:
         if dataset is not None:
             dataset.p_aug = FLAGS.p_aug
             dataset.frame_stack = FLAGS.frame_stack
@@ -102,13 +118,67 @@ def main(_):
     eval_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'eval.csv'))
     first_time = time.time()
     last_time = time.time()
-    for i in tqdm.tqdm(range(1, FLAGS.train_steps + 1), smoothing=0.1, dynamic_ncols=True):
-        # Update agent.
-        batch = train_dataset.sample(config['batch_size'])
-        if config['agent_name'] == 'rebrac':
-            agent, update_info = agent.update(batch, full_update=(i % config['actor_freq'] == 0))
+    
+    rng = jax.random.PRNGKey(FLAGS.seed)
+    expl_metrics = dict()
+    done = True
+    for i in tqdm.tqdm(range(1, FLAGS.offline_steps + FLAGS.online_steps + 1), smoothing=0.1, dynamic_ncols=True):
+        if i <= FLAGS.offline_steps:
+            # Offline RL.
+            batch = train_dataset.sample(config['batch_size'])
+            if config['agent_name'] in ['rebrac']:
+                agent, update_info = agent.update(batch, full_update=(i % config['actor_freq'] == 0))
+            else:
+                agent, update_info = agent.update(batch)
         else:
-            agent, update_info = agent.update(batch)
+            # Online fine-tuning.
+            rng, expl_rng = jax.random.split(rng)
+            
+            if done:
+                obs, _ = env.reset()
+            
+            if config['agent_name'] in ['value_flows']:
+                action = agent.sample_actions(observations=obs, temperature=1, seed=expl_rng, policy_extraction='rpg')
+            else:
+                action = agent.sample_actions(observations=obs, temperature=1, seed=expl_rng)
+            action = np.array(action)
+            
+            next_obs, reward, terminated, truncated, info = env.step(action.copy())
+            done = terminated or truncated
+
+            if 'antmaze' in FLAGS.env_name and (
+                'diverse' in FLAGS.env_name or 'play' in FLAGS.env_name or 'umaze' in FLAGS.env_name
+            ):
+                # Adjust reward for D4RL antmaze.
+                reward = reward - 1.0
+            
+            replay_buffer.add_transition(
+                dict(
+                    observations=obs,
+                    actions=action,
+                    rewards=reward,
+                    terminals=float(done),
+                    masks=1.0 - terminated,
+                    next_observations=next_obs,
+                )
+            )
+            obs = next_obs
+            
+            if done:
+                expl_metrics = {f'exploration/{k}': np.mean(v) for k, v in flatten(info).items()}
+
+            if FLAGS.balanced_sampling:
+                # Half-and-half sampling from the training dataset and the replay buffer.
+                dataset_batch = train_dataset.sample(config['batch_size'] // 2)
+                replay_batch = replay_buffer.sample(config['batch_size'] // 2)
+                batch = {k: np.concatenate([dataset_batch[k], replay_batch[k]], axis=0) for k in dataset_batch}
+            else:
+                batch = replay_buffer.sample(config['batch_size'])
+
+            if config['agent_name'] in ['rebrac']:
+                agent, update_info = agent.update(batch, full_update=(i % config['actor_freq'] == 0))
+            else:
+                agent, update_info = agent.update(batch)
 
         # Log metrics.
         if i % FLAGS.log_interval == 0:
@@ -119,6 +189,7 @@ def main(_):
                 train_metrics.update({f'validation/{k}': v for k, v in val_info.items()})
             train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
             train_metrics['time/total_time'] = time.time() - first_time
+            train_metrics.update(expl_metrics)
             last_time = time.time()
             if FLAGS.enable_wandb:
                 wandb.log(train_metrics, step=i)
@@ -126,16 +197,14 @@ def main(_):
 
         # Evaluate agent.
         if FLAGS.eval_interval != 0 and (i == 1 or i % FLAGS.eval_interval == 0):
-            renders = []
             eval_metrics = {}
-            eval_info, trajs, cur_renders = evaluate(
+            eval_info, _, renders = evaluate(
                 agent=agent,
                 env=eval_env,
                 num_eval_episodes=FLAGS.eval_episodes,
                 num_video_episodes=FLAGS.video_episodes,
                 video_frame_skip=FLAGS.video_frame_skip,
             )
-            renders.extend(cur_renders)
             for k, v in eval_info.items():
                 eval_metrics[f'evaluation/{k}'] = v
 

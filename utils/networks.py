@@ -56,6 +56,17 @@ class MLP(nn.Module):
         return x
 
 
+class LogParam(nn.Module):
+    """Scalar parameter module with log scale."""
+
+    init_value: float = 1.0
+
+    @nn.compact
+    def __call__(self):
+        log_value = self.param('log_value', init_fn=lambda key: jnp.full((), jnp.log(self.init_value)))
+        return jnp.exp(log_value)
+
+
 class TransformedWithMode(distrax.Transformed):
     """Transformed distribution with mode calculation."""
 
