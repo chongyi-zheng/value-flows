@@ -24,7 +24,7 @@
 
 Value Flows is an RL algorithm that models the full return distribution via flow-matching and enforces Bellman consistency at every transition.
 
-This repository contains code for running the Value Flows algorithm and 8 baselines in the offline and offline-to-online setting. These baselines include IQL, ReBRAC, FBRAC, IFQL, FQL, C51, IQN, CODAC, and RLPD.
+This repository contains code for running the Value Flows algorithm and 9 baselines in the offline and offline-to-online setting. These baselines include IQL, ReBRAC, FBRAC, IFQL, FQL, C51, IQN, CODAC, and RLPD.
 
 ## Installation
 
