@@ -251,18 +251,11 @@ class C51Agent(flax.struct.PyTreeNode):
             layer_norm=config['actor_layer_norm'],
             encoder=encoders.get('actor_flow'),
         )
-        actor_onestep_flow_def = ActorVectorField(
-            hidden_dims=config['actor_hidden_dims'],
-            action_dim=action_dim,
-            layer_norm=config['actor_layer_norm'],
-            encoder=encoders.get('actor_onestep_flow'),
-        )
 
         network_info = dict(
             critic=(critic_def, (ex_observations, ex_actions)),
             target_critic=(copy.deepcopy(critic_def), (ex_observations, ex_actions)),
             actor_flow=(actor_flow_def, (ex_observations, ex_actions, ex_times)),
-            actor_onestep_flow=(actor_onestep_flow_def, (ex_observations, ex_actions)),
         )
         networks = {k: v[0] for k, v in network_info.items()}
         network_args = {k: v[1] for k, v in network_info.items()}

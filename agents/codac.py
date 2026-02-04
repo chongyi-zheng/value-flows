@@ -288,7 +288,7 @@ class CODACAgent(flax.struct.PyTreeNode):
         temperature=1.0,
     ):
         """Sample actions from the actor."""
-        action_seed, noise_seed = jax.random.split(seed)
+        seed, action_seed = jax.random.split(seed)
         noises = jax.random.normal(
             action_seed,
             (

@@ -130,7 +130,7 @@ class IFQLAgent(flax.struct.PyTreeNode):
         orig_observations = observations
         if self.config['encoder'] is not None:
             observations = self.network.select('actor_flow_encoder')(observations)
-        action_seed, noise_seed = jax.random.split(seed)
+        seed, action_seed = jax.random.split(seed)
 
         # Sample `num_samples` noises and propagate them through the flow.
         actions = jax.random.normal(
