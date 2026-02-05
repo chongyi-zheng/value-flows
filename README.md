@@ -20,13 +20,13 @@
 
 </div>
 
-## Overview
+# Overview
 
 Value Flows is an RL algorithm that models the full return distribution via flow-matching and enforces Bellman consistency at every transition.
 
 This repository contains code for running the Value Flows algorithm and 9 baselines in the offline and offline-to-online setting. These baselines include IQL, ReBRAC, FBRAC, IFQL, FQL, C51, IQN, CODAC, and RLPD.
 
-## Installation
+# Installation
 
 1. Create an Anaconda environment: `conda create -n value-flows python=3.10.13 -y`
 2. Activate the environment: `conda activate value-flows`
@@ -53,7 +53,7 @@ This repository contains code for running the Value Flows algorithm and 9 baseli
    export PYOPENGL_PLATFORM=egl
    ```
 
-## Running experiments
+# Running experiments
 
 The `agents` folder contains the implementation of algorithms and default hyperparameters. Here are some example commands to run experiments:
 
@@ -70,12 +70,12 @@ python main.py --env_name=visual-cube-double-play-singletask-{task1, task2, task
 
 We include the complete hyperparameters for each method below.
 
-### Value Flows
+## Value Flows
 
 <details>
 <summary><b>Click to expand the full list of commands</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # Value Flows on OGBench tasks
@@ -110,7 +110,7 @@ python main.py --env_name=relocate-cloned-v1 --agent=agents/value_flows.py --age
 python main.py --env_name=relocate-expert-v1 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.ret_agg=min --agent.q_agg=min
 ```
 
-#### Offline-to-online RL
+### Offline-to-online RL
 
 ```
 # Value Flows on OGBench tasks
@@ -124,12 +124,12 @@ python main.py --env_name=scene-play-singletask-task2-v0 --online_steps=1_000_00
 
 </details>
 
-### Baselines
+## Baselines
 
 <details>
 <summary><b>Click to expand the full list of commands for IQL</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # IQL on OGBench tasks
@@ -145,7 +145,7 @@ python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, tas
 python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/iql.py --agent.alpha=10 --agent.encoder=impala_small
 ```
 
-#### Offline-to-online RL
+### Offline-to-online RL
 
 ```
 # IQL on OGBench tasks
@@ -160,7 +160,7 @@ python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_
 <details>
 <summary><b>Click to expand the full list of commands for ReBRAC</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # ReBRAC on OGBench tasks
@@ -181,7 +181,7 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 <details>
 <summary><b>Click to expand the full list of commands for FBRAC</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # FBRAC on OGBench tasks
@@ -202,7 +202,7 @@ python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3
 <details>
 <summary><b>Click to expand the full list of commands for IFQL</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # IFQL on OGBench tasks
@@ -218,7 +218,7 @@ python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, tas
 python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/ifql.py --agent.encoder=impala_small
 ```
 
-#### Offline-to-online RL
+### Offline-to-online RL
 
 ```
 # IFQL on OGBench tasks
@@ -233,7 +233,7 @@ python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_
 <details>
 <summary><b>Click to expand the full list of commands for FQL</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # FQL on OGBench tasks
@@ -249,7 +249,7 @@ python main.py --env_name=visual-scene-play-singletask-{task1, task2, task3, tas
 python main.py --env_name=visual-puzzle-3x3-play-singletask-{task1, task2, task3, task4, task5}-v0 --p_aug=0.5 --frame_stack=3 --agent=agents/fql.py --agent.alpha=300 --agent.encoder=impala_small
 ```
 
-#### Offline-to-online RL
+### Offline-to-online RL
 
 ```
 # FQL on OGBench tasks
@@ -264,7 +264,7 @@ python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_
 <details>
 <summary><b>Click to expand the full list of commands for C51</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # C51 on OGBench tasks
@@ -297,7 +297,7 @@ python main.py --env_name=relocate-expert-v1 --agent=agents/c51.py --agent.num_a
 <details>
 <summary><b>Click to expand the full list of commands for IQN</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # IQN on OGBench tasks
@@ -332,7 +332,7 @@ python main.py --env_name=relocate-cloned-v1 --agent=agents/iqn.py
 python main.py --env_name=relocate-expert-v1 --agent=agents/iqn.py --agent.quantile_agg=min
 ```
 
-#### Offline-to-online RL
+### Offline-to-online RL
 
 ```
 # IQN on OGBench tasks
@@ -349,7 +349,7 @@ python main.py --env_name=scene-play-singletask-task2-v0 --online_steps=1_000_00
 <details>
 <summary><b>Click to expand the full list of commands for CODAC</b></summary>
 
-#### Offline RL
+### Offline RL
 
 ```
 # CODAC on OGBench tasks
@@ -383,7 +383,7 @@ python main.py --env_name=relocate-expert-v1 --agent=agents/codac.py --agent.alp
 <details>
 <summary><b>Click to expand the full list of commands for RLPD</b></summary>
 
-#### Offline-to-online RL
+### Offline-to-online RL
 
 ```
 # RLPD on OGBench tasks
@@ -395,6 +395,17 @@ python main.py --env_name=cube-triple-play-singletask-task1-v0 --offline_steps=0
 
 </details>
 
-## Acknowledgments
+# Acknowledgments
 
 This codebase is adapted from [OGBench](https://github.com/seohongpark/ogbench) and [FQL](https://github.com/seohongpark/fql) implementations.
+
+# Citation
+
+```bibtex
+@inproceedings{dongzheng2026value,
+  title={Value flows},
+  author={Dong, Perry and Zheng, Chongyi and Finn, Chelsea and Sadigh, Dorsa and Eysenbach, Benjamin},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2026},
+}
+```
