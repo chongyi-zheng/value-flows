@@ -403,7 +403,7 @@ This codebase is adapted from [OGBench](https://github.com/seohongpark/ogbench) 
 
 ```bibtex
 @inproceedings{dongzheng2026value,
-  title={Value flows},
+  title={Value Flows},
   author={Dong, Perry and Zheng, Chongyi and Finn, Chelsea and Sadigh, Dorsa and Eysenbach, Benjamin},
   booktitle={International Conference on Learning Representations (ICLR)},
   year={2026},
