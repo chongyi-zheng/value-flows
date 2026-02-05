@@ -36,7 +36,7 @@ This repository contains code for running the Value Flows algorithm and 9 baseli
    conda install -c conda-forge mesalib -y
    pip install -r requirements.txt
    ```
-3. Setup `MuJoCo 2.1` for D4RL environments
+4. Setup `MuJoCo 2.1` for D4RL environments
    ```
    mkdir ~/.mujoco
    cd ~/.mujoco
@@ -45,7 +45,7 @@ This repository contains code for running the Value Flows algorithm and 9 baseli
    tar -xvzf mujoco210-linux-x86_64.tar.gz
    rm mujoco210-linux-x86_64.tar.gz
    ```
-4. Export environment variables
+5. Export environment variables
    ```
    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia:$HOME/.mujoco/mujoco210/bin
    export PYTHONPATH=path_to_value_flows_dir
