@@ -41,6 +41,7 @@ def evaluate(
     num_video_episodes=0,
     video_frame_skip=3,
     eval_temperature=0,
+    **kwargs,
 ):
     """Evaluate the agent in the environment.
 
@@ -51,6 +52,7 @@ def evaluate(
         num_video_episodes: Number of episodes to render. These episodes are not included in the statistics.
         video_frame_skip: Number of frames to skip between renders.
         eval_temperature: Action sampling temperature.
+        **kwargs: Keyword arguments to pass to the sample_actions function.
 
     Returns:
         A tuple containing the statistics, trajectories, and rendered videos.
@@ -69,7 +71,7 @@ def evaluate(
         step = 0
         render = []
         while not done:
-            action = actor_fn(observations=observation, temperature=eval_temperature)
+            action = actor_fn(observations=observation, temperature=eval_temperature, **kwargs)
             action = np.array(action)
             action = np.clip(action, -1, 1)
 

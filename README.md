@@ -118,7 +118,7 @@ python main.py --env_name=antmaze-large-navigate-singletask-task1-v0 --online_st
 python main.py --env_name=humanoidmaze-medium-navigate-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.3 --agent.alpha=100 --agent.q_agg=min --agent.ret_agg=min
 python main.py --env_name=cube-double-play-singletask-task2-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=1 --agent.confidence_weight_temp=3 --agent.alpha=300
 python main.py --env_name=cube-triple-play-singletask-task1-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.discount=0.995 --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.03 --agent.alpha=300
-python main.py --env_name=puzzle-4x4-play-singletask-task4-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.confidence_weight_temp=100 --agent.alpha=300  --agent.q_agg=min
+python main.py --env_name=puzzle-4x4-play-singletask-task4-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.bcfm_lambda=3 --agent.confidence_weight_temp=0.1 --agent.alpha=300  --agent.q_agg=min
 python main.py --env_name=scene-play-singletask-task2-v0 --online_steps=1_000_000 --agent=agents/value_flows.py --agent.bcfm_lambda=1 --agent.confidence_weight_temp=0.3 --agent.alpha=300 --agent.ret_agg=min
 ```
 

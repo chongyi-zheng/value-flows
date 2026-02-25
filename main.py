@@ -198,12 +198,17 @@ def main(_):
         # Evaluate agent.
         if FLAGS.eval_interval != 0 and (i == 1 or i % FLAGS.eval_interval == 0):
             eval_metrics = {}
+            if i > FLAGS.offline_steps and config['agent_name'] in ['value_flows']:
+                eval_kwargs = dict(policy_extraction='rpg')
+            else:
+                eval_kwargs = dict()
             eval_info, _, renders = evaluate(
                 agent=agent,
                 env=eval_env,
                 num_eval_episodes=FLAGS.eval_episodes,
                 num_video_episodes=FLAGS.video_episodes,
                 video_frame_skip=FLAGS.video_frame_skip,
+                **eval_kwargs,
             )
             for k, v in eval_info.items():
                 eval_metrics[f'evaluation/{k}'] = v
