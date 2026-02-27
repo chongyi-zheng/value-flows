@@ -267,7 +267,7 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
 
         def func(carry, i):
             """
-            carry: (noisy_goals, )
+            carry: (noisy_returns, )
             i: current step index
             """
             (noisy_returns, noisy_jac_eps_prod) = carry
@@ -317,7 +317,7 @@ class ValueFlowsAgent(flax.struct.PyTreeNode):
 
         def func(carry, i):
             """
-            carry: (noisy_goals, )
+            carry: (noisy_actions, )
             i: current step index
             """
             (noisy_actions,) = carry
